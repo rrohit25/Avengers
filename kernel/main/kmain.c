@@ -143,7 +143,9 @@ bootstrap(int arg1, void *arg2)
         /* necessary to finalize page table information */
         pt_template_init();
 
-        NOT_YET_IMPLEMENTED("PROCS: bootstrap");
+        /*NOT_YET_IMPLEMENTED("PROCS: bootstrap");*/
+	curproc = proc_create("IDLE");
+        curthr = kthread_create(curproc, idleproc_run(2,NULL), 1, NULL);
 
         panic("weenix returned to bootstrap()!!! BAD!!!\n");
         return NULL;
@@ -233,8 +235,10 @@ idleproc_run(int arg1, void *arg2)
 static kthread_t *
 initproc_create(void)
 {
-        NOT_YET_IMPLEMENTED("PROCS: initproc_create");
-        return NULL;
+        /*NOT_YET_IMPLEMENTED("PROCS: initproc_create");*/
+        proc_t *init_proc = proc_create("INIT");
+	kthread_t *init_thread = kthread_create(init_proc,initproc_run(2,NULL),2,NULL);
+        return init_thread;
 }
 
 /**
@@ -251,7 +255,10 @@ initproc_create(void)
 static void *
 initproc_run(int arg1, void *arg2)
 {
-        NOT_YET_IMPLEMENTED("PROCS: initproc_run");
+        /*NOT_YET_IMPLEMENTED("PROCS: initproc_run");*/
+	kshell_t* ksh = kshell_create(0);
+
+	kshell_echo(ksh,"Hey Yo!");
 
         return NULL;
 }
