@@ -82,8 +82,19 @@ failed:
 proc_t *
 proc_create(char *name)
 {
-        NOT_YET_IMPLEMENTED("PROCS: proc_create");
-        return NULL;
+        /*NOT_YET_IMPLEMENTED("PROCS: proc_create");*/
+        pid_t pid = _proc_getid();
+
+	proc_t* new_proc = slab_obj_alloc(proc_allocator);
+	memset(new_proc,0,sizeof(proc_t));
+	new_proc->p_pid = pid;
+	new_proc->p_state = PROC_RUNNING;
+	/*new_proc->p_pproc = curproc; check if this right */
+
+	/*list_insert_tail(_proc_list,new_proc);*/
+	KASSERT(PID_IDLE != pid || list_empty(&_proc_list)); /* pid can only be PID_IDLE if this is the first process */
+	curproc = new_proc;
+	return new_proc;
 }
 
 /**
