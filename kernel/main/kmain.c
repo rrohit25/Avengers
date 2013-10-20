@@ -145,7 +145,10 @@ bootstrap(int arg1, void *arg2)
 
         /*NOT_YET_IMPLEMENTED("PROCS: bootstrap");*/
 	curproc = proc_create("IDLE");
-        curthr = kthread_create(curproc, idleproc_run(2,NULL), 1, NULL);
+	KASSERT(NULL != curproc); /* make sure that the "idle" process has been created successfully */
+	KASSERT(PID_IDLE == curproc->p_pid); /* make sure that what has been created is the "idle" process */
+	curthr = kthread_create(curproc, idleproc_run(2,NULL), 1, NULL);
+	KASSERT(NULL != curthr); /* make sure that the thread for the "idle" process has been created successfully */
 
         panic("weenix returned to bootstrap()!!! BAD!!!\n");
         return NULL;
@@ -236,9 +239,12 @@ static kthread_t *
 initproc_create(void)
 {
         /*NOT_YET_IMPLEMENTED("PROCS: initproc_create");*/
-        proc_t *init_proc = proc_create("INIT");
+	proc_t *init_proc = proc_create("INIT");
+	KASSERT(NULL != init_proc);
+	KASSERT(PID_INIT == init_proc->p_pid);
 	kthread_t *init_thread = kthread_create(init_proc,initproc_run(2,NULL),2,NULL);
-        return init_thread;
+	KASSERT(init_thread != NULL);
+	return init_thread;
 }
 
 /**

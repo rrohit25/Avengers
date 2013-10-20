@@ -80,6 +80,7 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
         new_thread->kt_kstack = alloc_stack();
         new_thread->kt_proc = p;
         /* p->p_threads =		add thread to process p*/
+        curthr = new_thread;
         return new_thread;
 }
 

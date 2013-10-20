@@ -89,10 +89,12 @@ proc_create(char *name)
 	memset(new_proc,0,sizeof(proc_t));
 	new_proc->p_pid = pid;
 	new_proc->p_state = PROC_RUNNING;
-	/*new_proc->p_pproc = curproc; check if this right */
+	new_proc->p_pproc = curproc;
+	new_proc->p_pagedir = pt_create_pagedir();
 
 	/*list_insert_tail(_proc_list,new_proc);*/
 	KASSERT(PID_IDLE != pid || list_empty(&_proc_list)); /* pid can only be PID_IDLE if this is the first process */
+	KASSERT(PID_INIT != pid || PID_IDLE == curproc->p_pid); /* pid can only be PID_INIT when creating from idle process */
 	curproc = new_proc;
 	return new_proc;
 }
