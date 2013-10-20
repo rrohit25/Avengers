@@ -100,7 +100,10 @@ sched_queue_empty(ktqueue_t *q)
 void
 sched_sleep_on(ktqueue_t *q)
 {
-        NOT_YET_IMPLEMENTED("PROCS: sched_sleep_on");
+	//NOT_YET_IMPLEMENTED("PROCS: sched_sleep_on");
+	curthr->kt_state = KT_SLEEP;
+        ktqueue_enqueue(q,curthr);
+        sched_switch();
 }
 
 
@@ -114,21 +117,41 @@ sched_sleep_on(ktqueue_t *q)
 int
 sched_cancellable_sleep_on(ktqueue_t *q)
 {
-        NOT_YET_IMPLEMENTED("PROCS: sched_cancellable_sleep_on");
+        //NOT_YET_IMPLEMENTED("PROCS: sched_cancellable_sleep_on");
+        curthr->kt_state = KT_SLEEP_CANCELLABLE;
+        ktqueue_enqueue(q,curthr);
+        sched_switch();
+
+        if (curthr->kt_cancelled)
+        {
+                 return -EINTR;
+		//Need to check with Ajith if kthread_cancel calls kthread_exit
+        }
+        
         return 0;
 }
 
 kthread_t *
 sched_wakeup_on(ktqueue_t *q)
 {
-        NOT_YET_IMPLEMENTED("PROCS: sched_wakeup_on");
-        return NULL;
+        //NOT_YET_IMPLEMENTED("PROCS: sched_wakeup_on");
+        kthread_t *thr = ktqueue_dequeue(q);
+        if (thr != NULL)
+        {
+                KASSERT((thr->kt_state == KT_SLEEP) || (thr->kt_state == KT_SLEEP_CANCELLABLE));
+                sched_make_runnable(thr);
+        }
+        return thr;
 }
 
 void
 sched_broadcast_on(ktqueue_t *q)
 {
-        NOT_YET_IMPLEMENTED("PROCS: sched_broadcast_on");
+        //NOT_YET_IMPLEMENTED("PROCS: sched_broadcast_on");
+	while (ktqueue_t->tq_size!=0) 
+        {
+        	sched_wakeup_on(q);
+	}
 }
 
 /*
@@ -143,7 +166,17 @@ sched_broadcast_on(ktqueue_t *q)
 void
 sched_cancel(struct kthread *kthr)
 {
-        NOT_YET_IMPLEMENTED("PROCS: sched_cancel");
+        //NOT_YET_IMPLEMENTED("PROCS: sched_cancel");
+	 if(kthr->kt_state != KT_SLEEP_CANCELLABLE)
+        {
+                kthr->kt_cancelled=1;
+        }
+        else
+        {
+                kthr->kt_cancelled=1;
+		ktqueue_remove(kthr->kt_wchan, kthr);
+		sched_switch();
+        }
 }
 
 /*
@@ -204,5 +237,12 @@ sched_switch(void)
 void
 sched_make_runnable(kthread_t *thr)
 {
-        NOT_YET_IMPLEMENTED("PROCS: sched_make_runnable");
+        //NOT_YET_IMPLEMENTED("PROCS: sched_make_runnable");
+	uint8_t original_ipl = apic_getipl();
+        apic_setipl(IPL_HIGH);
+        KASSERT(&kt_runq != thr->kt_wchan);
+        thr->kt_state = KT_RUN;
+        ktqueue_enqueue(&kt_runq,thr);
+	sched_switch();
+        apic_setipl(original_ipl);
 }
