@@ -227,6 +227,7 @@ sched_switch(void)
 	        kthread_t *prevthread = curthr;
 	        kthread_t *curthread = ktqueue_dequeue(&kt_runq);
 	        context_switch(&prevthread->kt_ctx,&curthread->kt_ctx);
+	        kt_runq.tq_size--;
 	    }
 
 }
