@@ -74,14 +74,18 @@ free_stack(char *stack)
 kthread_t *
 kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 {
-        /*NOT_YET_IMPLEMENTED("PROCS: kthread_create");*/
+	/*NOT_YET_IMPLEMENTED("PROCS: kthread_create");*/
+	KASSERT(NULL != p); /* should have associated process */
 	kthread_init();
-        kthread_t* new_thread = slab_obj_alloc(kthread_allocator);
-        new_thread->kt_kstack = alloc_stack();
-        new_thread->kt_proc = p;
-        /* p->p_threads =		add thread to process p*/
-        curthr = new_thread;
-        return new_thread;
+	kthread_t* new_thread = slab_obj_alloc(kthread_allocator);
+	new_thread->kt_kstack = alloc_stack();
+	new_thread->kt_proc = p;
+	list_insert_tail(&p->p_threads, &new_thread->kt_plink);
+	context_setup(&new_thread->kt_ctx, func, 0, NULL, page_alloc(), PAGE_SIZE,
+			p->p_pagedir);
+	/*context_make_active(&new_thread->kt_ctx);*/
+	curthr = new_thread;
+	return new_thread;
 }
 
 void
@@ -109,7 +113,15 @@ kthread_destroy(kthread_t *t)
 void
 kthread_cancel(kthread_t *kthr, void *retval)
 {
-        NOT_YET_IMPLEMENTED("PROCS: kthread_cancel");
+	/*NOT_YET_IMPLEMENTED("PROCS: kthread_cancel");*/
+	KASSERT(NULL != kthr);
+	if (kthr->kt_state == KT_SLEEP_CANCELLABLE) {
+		kthr->kt_cancelled = 1;
+	} else if (kthr->kt_state == KT_RUN) {
+		kthr->kt_retval = 0; /* normal exit */
+		kthread_exit(kthr->kt_retval);
+		kthr->kt_state = KT_EXITED;
+	}
 }
 
 /*
@@ -125,7 +137,11 @@ kthread_cancel(kthread_t *kthr, void *retval)
 void
 kthread_exit(void *retval)
 {
-        NOT_YET_IMPLEMENTED("PROCS: kthread_exit");
+	/*NOT_YET_IMPLEMENTED("PROCS: kthread_exit");*/
+	proc_thread_exited(retval);
+	KASSERT(!curthr->kt_wchan); /* queue should be empty */
+	KASSERT(!curthr->kt_qlink.l_next && !curthr->kt_qlink.l_prev); /* queue should be empty */
+	KASSERT(curthr->kt_proc == curproc);
 }
 
 /*
