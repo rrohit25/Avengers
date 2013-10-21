@@ -76,7 +76,7 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 {
         /*NOT_YET_IMPLEMENTED("PROCS: kthread_create");*/
 	kthread_init();
-        kthread_t* new_thread = (kthread_t*) kthread_allocator;
+        kthread_t* new_thread = slab_obj_alloc(kthread_allocator);
         new_thread->kt_kstack = alloc_stack();
         new_thread->kt_proc = p;
         /* p->p_threads =		add thread to process p*/

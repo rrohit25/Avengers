@@ -262,9 +262,8 @@ static void *
 initproc_run(int arg1, void *arg2)
 {
         /*NOT_YET_IMPLEMENTED("PROCS: initproc_run");*/
-	kshell_t* ksh = kshell_create(0);
-
-	kshell_echo(ksh,"Hey Yo!");
+	/*kshell_t* ksh = kshell_create(0);
+	kshell_echo(ksh,"Hey Yo!");*/
 
         return NULL;
 }

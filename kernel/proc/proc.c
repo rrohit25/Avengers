@@ -91,11 +91,18 @@ proc_create(char *name)
 	new_proc->p_state = PROC_RUNNING;
 	new_proc->p_pproc = curproc;
 	new_proc->p_pagedir = pt_create_pagedir();
-
-	/*list_insert_tail(_proc_list,new_proc);*/
+	strcpy(new_proc->p_comm,name);
+	/*context_setup(new_proc->p_);*/
 	KASSERT(PID_IDLE != pid || list_empty(&_proc_list)); /* pid can only be PID_IDLE if this is the first process */
 	KASSERT(PID_INIT != pid || PID_IDLE == curproc->p_pid); /* pid can only be PID_INIT when creating from idle process */
+	list_insert_tail(&_proc_list, &new_proc->p_list_link);
+
+	/*list_insert_tail(_proc_list,new_proc);*/
+
 	curproc = new_proc;
+	if(pid == PID_INIT) {
+		proc_initproc = new_proc;
+	}
 	return new_proc;
 }
 
@@ -218,7 +225,11 @@ do_waitpid(pid_t pid, int options, int *status)
 void
 do_exit(int status)
 {
-        NOT_YET_IMPLEMENTED("PROCS: do_exit");
+        /*NOT_YET_IMPLEMENTED("PROCS: do_exit");*/
+	kthread_t *kthr;
+	list_iterate_begin(&curproc->p_threads, kthr, kthread_t, kt_plink){
+
+	}list_iterate_end();
 }
 
 size_t
