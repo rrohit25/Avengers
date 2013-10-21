@@ -117,18 +117,19 @@ sched_sleep_on(ktqueue_t *q)
 int
 sched_cancellable_sleep_on(ktqueue_t *q)
 {
-        /*NOT_YET_IMPLEMENTED("PROCS: sched_cancellable_sleep_on");*/
-        curthr->kt_state = KT_SLEEP_CANCELLABLE;
-        ktqueue_enqueue(q,curthr);
-        sched_switch();
+		/*NOT_YET_IMPLEMENTED("PROCS: sched_cancellable_sleep_on"); */
+	    /*curthr->kt_state = KT_SLEEP_CANCELLABLE;*/
 
-        if (curthr->kt_cancelled)
-        {
-                 return -EINTR;
-		/*Need to check with Ajith if kthread_cancel calls kthread_exit*/
-        }
-        
-        return 0;
+	    if (curthr->kt_cancelled)
+	    {
+	        return -EINTR;
+	    }
+
+	    ktqueue_enqueue(q,curthr);
+	    sched_switch();
+
+	    return 0;
+
 }
 
 kthread_t *
@@ -147,11 +148,11 @@ sched_wakeup_on(ktqueue_t *q)
 void
 sched_broadcast_on(ktqueue_t *q)
 {
-        /*NOT_YET_IMPLEMENTED("PROCS: sched_broadcast_on");*/
-	/*while (ktqueue_t->tq_size!=0)
+    /*NOT_YET_IMPLEMENTED("PROCS: sched_broadcast_on");*/
+	while (q->tq_size!=0)
         {
         	sched_wakeup_on(q);
-	}*/
+	}
 }
 
 /*
@@ -218,7 +219,16 @@ sched_cancel(struct kthread *kthr)
 void
 sched_switch(void)
 {
-        NOT_YET_IMPLEMENTED("PROCS: sched_switch");
+        /* NOT_YET_IMPLEMENTED("PROCS: sched_switch"); */
+		if(kt_runq.tq_size !=0)
+	    {
+	        uint8_t original_ipl = apic_getipl();
+	        apic_setipl(IPL_HIGH);
+	        kthread_t *prevthread = curthr;
+	        kthread_t *curthread = ktqueue_dequeue(&kt_runq);
+	        context_switch(&prevthread->kt_ctx,&curthread->kt_ctx);
+	    }
+
 }
 
 /*
@@ -237,12 +247,12 @@ sched_switch(void)
 void
 sched_make_runnable(kthread_t *thr)
 {
-        /*NOT_YET_IMPLEMENTED("PROCS: sched_make_runnable");*/
+    /*NOT_YET_IMPLEMENTED("PROCS: sched_make_runnable");*/
 	uint8_t original_ipl = apic_getipl();
-        apic_setipl(IPL_HIGH);
-        KASSERT(&kt_runq != thr->kt_wchan);
-        thr->kt_state = KT_RUN;
-        ktqueue_enqueue(&kt_runq,thr);
+    apic_setipl(IPL_HIGH);
+    KASSERT(&kt_runq != thr->kt_wchan);
+    thr->kt_state = KT_RUN;
+    ktqueue_enqueue(&kt_runq,thr);
 	sched_switch();
-        apic_setipl(original_ipl);
+    apic_setipl(original_ipl);
 }
