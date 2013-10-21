@@ -99,6 +99,10 @@ proc_create(char *name)
 	KASSERT(PID_INIT != pid || PID_IDLE == curproc->p_pid); /* pid can only be PID_INIT when creating from idle process */
 	list_insert_tail(&_proc_list, &new_proc->p_list_link);
 
+	if(pid != PID_IDLE && pid != PID_INIT) {
+		list_insert_tail(&curproc->p_children, &new_proc->p_child_link);
+	}
+
 	curproc = new_proc;
 	if (pid == PID_INIT) {
 		proc_initproc = new_proc;
@@ -133,7 +137,33 @@ proc_create(char *name)
 void
 proc_cleanup(int status)
 {
-        NOT_YET_IMPLEMENTED("PROCS: proc_cleanup");
+
+	/*NOT_YET_IMPLEMENTED("PROCS: proc_cleanup");*/
+	proc_t *p = curproc;
+	proc_t *initproc = proc_lookup(1);
+	proc_t *child = NULL;
+	list_t parent_waitlist;
+	parent_waitlist = p->p_pproc->p_wait.tq_list;
+
+	if (!list_empty(&p->p_children)) {
+		list_iterate_begin(&p->p_children, child, proc_t, p_child_link)
+					{
+						list_remove_head(&p->p_children);
+						list_insert_tail(&initproc->p_children,
+								&child->p_list_link);
+						child->p_pproc = initproc;
+
+					}list_iterate_end();
+
+				}
+	curproc->p_state = PROC_DEAD;
+	curproc->p_status = 0;
+	if (!list_empty(&parent_waitlist)) {
+		sched_broadcast_on(&curproc->p_pproc->p_wait);
+		/*sched_switch();*/
+
+	}
+
 }
 
 /*
@@ -227,8 +257,16 @@ proc_thread_exited(void *retval)
 pid_t
 do_waitpid(pid_t pid, int options, int *status)
 {
-        NOT_YET_IMPLEMENTED("PROCS: do_waitpid");
-        return 0;
+	/*NOT_YET_IMPLEMENTED("PROCS: do_waitpid");*/
+
+	if (pid < 0) {
+		/*log error: not supported*/
+		return 0;
+	}
+	proc_t *p = proc_lookup(pid);
+	KASSERT(NULL != p); /* the process should not be NULL */
+
+	return 0;
 }
 
 /*
