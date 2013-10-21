@@ -82,23 +82,24 @@ failed:
 proc_t *
 proc_create(char *name)
 {
-        /*NOT_YET_IMPLEMENTED("PROCS: proc_create");*/
-        pid_t pid = _proc_getid();
+	/*NOT_YET_IMPLEMENTED("PROCS: proc_create");*/
+	pid_t pid = _proc_getid();
 
 	proc_t* new_proc = slab_obj_alloc(proc_allocator);
-	memset(new_proc,0,sizeof(proc_t));
+	memset(new_proc, 0, sizeof(proc_t));
 	new_proc->p_pid = pid;
 	new_proc->p_state = PROC_RUNNING;
+	/*new_proc->p_status =			has to be set to what????*/
 	new_proc->p_pproc = curproc;
 	new_proc->p_pagedir = pt_create_pagedir();
-	strcpy(new_proc->p_comm,name);
+	strcpy(new_proc->p_comm, name);
 
 	KASSERT(PID_IDLE != pid || list_empty(&_proc_list)); /* pid can only be PID_IDLE if this is the first process */
 	KASSERT(PID_INIT != pid || PID_IDLE == curproc->p_pid); /* pid can only be PID_INIT when creating from idle process */
 	list_insert_tail(&_proc_list, &new_proc->p_list_link);
 
 	curproc = new_proc;
-	if(pid == PID_INIT) {
+	if (pid == PID_INIT) {
 		proc_initproc = new_proc;
 	}
 	return new_proc;
@@ -145,7 +146,16 @@ proc_cleanup(int status)
 void
 proc_kill(proc_t *p, int status)
 {
-        NOT_YET_IMPLEMENTED("PROCS: proc_kill");
+	/*NOT_YET_IMPLEMENTED("PROCS: proc_kill");*/
+	if (p == curproc) {
+		do_exit(p->p_status);
+	} else {
+		kthread_t *kthr;
+		list_iterate_begin(&curproc->p_threads, kthr, kthread_t, kt_plink) {
+			/*cancel each thread*/
+			kthread_cancel(kthr, kthr->kt_retval);
+		}list_iterate_end();
+	}
 }
 
 /*
@@ -157,7 +167,11 @@ proc_kill(proc_t *p, int status)
 void
 proc_kill_all()
 {
-        NOT_YET_IMPLEMENTED("PROCS: proc_kill_all");
+        /*NOT_YET_IMPLEMENTED("PROCS: proc_kill_all");*/
+	proc_t *proc;
+	list_iterate_begin(&_proc_list, proc, proc_t, p_list_link) {
+		proc_kill(proc, proc->p_status);
+	}list_iterate_end();
 }
 
 proc_t *
@@ -226,11 +240,11 @@ do_exit(int status)
         /*NOT_YET_IMPLEMENTED("PROCS: do_exit");*/
 	kthread_t *kthr;
 	list_iterate_begin(&curproc->p_threads, kthr, kthread_t, kt_plink){
-		/*cancel all threads*/
-
+		/*cancel each thread*/
+		kthread_cancel(kthr,kthr->kt_retval);
 	}list_iterate_end();
 
-	proc_cleanup(curthr->kt_state);
+	proc_cleanup(curproc->p_status);
 }
 
 size_t
