@@ -93,6 +93,7 @@ proc_create(char *name)
 	new_proc->p_pproc = curproc;
 	new_proc->p_pagedir = pt_create_pagedir();
 	strcpy(new_proc->p_comm, name);
+	list_init(&new_proc->p_children);
 
 	KASSERT(PID_IDLE != pid || list_empty(&_proc_list)); /* pid can only be PID_IDLE if this is the first process */
 	KASSERT(PID_INIT != pid || PID_IDLE == curproc->p_pid); /* pid can only be PID_INIT when creating from idle process */
@@ -147,13 +148,15 @@ void
 proc_kill(proc_t *p, int status)
 {
 	/*NOT_YET_IMPLEMENTED("PROCS: proc_kill");*/
+	/*p->p_status = status;			(not sure) */
 	if (p == curproc) {
-		do_exit(p->p_status);
+		do_exit(status);
 	} else {
 		kthread_t *kthr;
 		list_iterate_begin(&curproc->p_threads, kthr, kthread_t, kt_plink) {
 			/*cancel each thread*/
 			kthread_cancel(kthr, kthr->kt_retval);
+			sched_make_runnable(kthr);
 		}list_iterate_end();
 	}
 }
@@ -203,7 +206,7 @@ proc_list()
 void
 proc_thread_exited(void *retval)
 {
-        NOT_YET_IMPLEMENTED("PROCS: proc_thread_exited");
+        /*NOT_YET_IMPLEMENTED("PROCS: proc_thread_exited");*/
 }
 
 /* If pid is -1 dispose of one of the exited children of the current
