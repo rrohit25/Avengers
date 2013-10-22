@@ -237,7 +237,6 @@ sched_switch(void)
 	        curthr = curthread;
 	        context_switch(&prevthread->kt_ctx,&curthread->kt_ctx);
 
-	    }
 }
 
 /*
