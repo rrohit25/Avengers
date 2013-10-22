@@ -170,6 +170,8 @@ proc_cleanup(int status)
 				}
 	curproc->p_state = PROC_DEAD;
 	curproc->p_status = 0;
+	kthread_destroy(curthr);
+
 	/*sched_switch();*/
 }
 
