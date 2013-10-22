@@ -89,7 +89,7 @@ proc_create(char *name)
 	memset(new_proc, 0, sizeof(proc_t));
 	new_proc->p_pid = pid;
 	new_proc->p_state = PROC_RUNNING;
-	/*new_proc->p_status =			has to be set to what????*/
+        new_proc->p_status = 1;
 	new_proc->p_pproc = curproc;
 	new_proc->p_pagedir = pt_create_pagedir();
 	strcpy(new_proc->p_comm, name);
@@ -100,10 +100,14 @@ proc_create(char *name)
 	list_insert_tail(&_proc_list, &new_proc->p_list_link);
 
 	if(pid != PID_IDLE && pid != PID_INIT) {
-		list_insert_tail(&curproc->p_children, &new_proc->p_child_link);
+	  curproc = new_proc; /* shoould check whether this should be done only for INIT & IDLE */
+	  list_insert_tail(&curproc->p_children, &new_proc->p_child_link);
+	}
+        else
+	{
+	   new_proc->p_pproc = NULL;	
 	}
 
-	curproc = new_proc;
 	if (pid == PID_INIT) {
 		proc_initproc = new_proc;
 	}
@@ -236,7 +240,8 @@ proc_list()
 void
 proc_thread_exited(void *retval)
 {
-        /*NOT_YET_IMPLEMENTED("PROCS: proc_thread_exited");*/
+    proc_cleanup(0);
+	/*NOT_YET_IMPLEMENTED("PROCS: proc_thread_exited");*/
 }
 
 /* If pid is -1 dispose of one of the exited children of the current
@@ -258,15 +263,72 @@ pid_t
 do_waitpid(pid_t pid, int options, int *status)
 {
 	/*NOT_YET_IMPLEMENTED("PROCS: do_waitpid");*/
-
-	if (pid < 0) {
+	proc_t * cur_child;
+	kthread_t *cur_thread;
+	int thread_destroyed=0;
+	if (pid == -1) {
 		/*log error: not supported*/
-		return 0;
-	}
-	proc_t *p = proc_lookup(pid);
-	KASSERT(NULL != p); /* the process should not be NULL */
+		while(1)
+		{
+			list_iterate_begin(&curproc->p_children,cur_child,proc_t,p_child_link){
+				if(cur_child->p_state==PROC_DEAD){
 
-	return 0;
+					list_iterate_begin(&cur_child->p_threads,cur_thread,kthread_t,kt_plink){
+
+						kthread_destroy(cur_thread);
+						thread_destroyed=1;
+
+					}list_iterate_end();
+					if(thread_destroyed ==1){
+					*status = cur_child->p_status;
+					list_remove(&cur_child->p_child_link);
+					list_remove(&cur_child->p_list_link);
+					return(cur_child->p_pid);
+					}
+				}
+
+			}list_iterate_end();
+			sched_sleep_on(&curproc->p_wait);
+
+		}
+	}
+
+	thread_destroyed=0;
+	if (pid > 0) {
+		/*log error: not supported*/
+		if(list_empty(&curproc->p_children)){
+			return -ECHILD;
+
+		}
+		while(1)
+		{
+			list_iterate_begin(&curproc->p_children,cur_child,proc_t,p_child_link){
+				if(cur_child->p_pid== pid){
+					sched_sleep_on(&curproc->p_wait);
+					list_iterate_begin(&cur_child->p_threads,cur_thread,kthread_t,kt_plink){
+
+						kthread_destroy(cur_thread);
+						thread_destroyed=1;
+
+					}list_iterate_end();
+					if(thread_destroyed ==1){
+					*status = cur_child->p_status;
+					list_remove(&cur_child->p_child_link);
+					list_remove(&cur_child->p_list_link);
+					return(cur_child->p_pid);
+					}
+				}
+
+			}list_iterate_end();
+			if(thread_destroyed==0){
+				return -ECHILD;
+			}
+
+
+		}
+	}
+
+
 }
 
 /*
