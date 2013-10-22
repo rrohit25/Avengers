@@ -220,16 +220,24 @@ void
 sched_switch(void)
 {
         /* NOT_YET_IMPLEMENTED("PROCS: sched_switch"); */
-		if(kt_runq.tq_size !=0)
-	    {
+
 	        uint8_t original_ipl = apic_getipl();
 	        apic_setipl(IPL_HIGH);
 	        kthread_t *prevthread = curthr;
 	        kthread_t *curthread = ktqueue_dequeue(&kt_runq);
+	        while(curthread == NULL)
+	        {
+	        	apic_setipl(IPL_LOW);
+	        	intr_wait();
+	        	apic_setipl(IPL_HIGH);
+	        	curthread = ktqueue_dequeue(&kt_runq);
+	        }
+	        apic_setipl(original_ipl);
+	        curproc=curthread->kt_proc;
+	        curthr = curthread;
 	        context_switch(&prevthread->kt_ctx,&curthread->kt_ctx);
-	        kt_runq.tq_size--;
-	    }
 
+	    }
 }
 
 /*
