@@ -147,8 +147,9 @@ bootstrap(int arg1, void *arg2)
 	curproc = proc_create("IDLE");
 	KASSERT(NULL != curproc); /* make sure that the "idle" process has been created successfully */
 	KASSERT(PID_IDLE == curproc->p_pid); /* make sure that what has been created is the "idle" process */
-	curthr = kthread_create(curproc, idleproc_run(2,NULL), 1, NULL);
+	curthr = kthread_create(curproc, idleproc_run, 1, NULL);
 	KASSERT(NULL != curthr); /* make sure that the thread for the "idle" process has been created successfully */
+	context_make_active(&curthr->kt_ctx);
 
         panic("weenix returned to bootstrap()!!! BAD!!!\n");
         return NULL;
@@ -242,9 +243,15 @@ initproc_create(void)
 	proc_t *init_proc = proc_create("INIT");
 	KASSERT(NULL != init_proc);
 	KASSERT(PID_INIT == init_proc->p_pid);
-	kthread_t *init_thread = kthread_create(init_proc,initproc_run(2,NULL),2,NULL);
+	kthread_t *init_thread = kthread_create(init_proc,initproc_run,2,NULL);
 	KASSERT(init_thread != NULL);
+	context_make_active(&init_thread->kt_ctx);
 	return init_thread;
+}
+
+void test() {
+
+	return;
 }
 
 /**
@@ -261,12 +268,23 @@ initproc_create(void)
 static void *
 initproc_run(int arg1, void *arg2)
 {
-        /*NOT_YET_IMPLEMENTED("PROCS: initproc_run");*/
-	/*kshell_t* ksh = kshell_create(0);
-	kshell_echo(ksh,"Hey Yo!");*/
+	/*NOT_YET_IMPLEMENTED("PROCS: initproc_run");*/
 
-        return NULL;
+/*#ifdef __DRIVERS__
+
+	kshell_add_command("help", test, "invoke testproc()...");
+
+	kshell_t *kshell = kshell_create(0);
+	if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
+	while (kshell_execute_next(kshell));
+	kshell_destroy(kshell);
+
+#endif */  /* __DRIVERS__ */
+
+	return NULL;
 }
+
+
 
 /**
  * Clears all interrupts and halts, meaning that we will never run

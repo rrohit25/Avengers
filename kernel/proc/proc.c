@@ -94,6 +94,7 @@ proc_create(char *name)
 	new_proc->p_pagedir = pt_create_pagedir();
 	strcpy(new_proc->p_comm, name);
 	list_init(&new_proc->p_children);
+	list_init(&new_proc->p_threads);
 
 	KASSERT(PID_IDLE != pid || list_empty(&_proc_list)); /* pid can only be PID_IDLE if this is the first process */
 	KASSERT(PID_INIT != pid || PID_IDLE == curproc->p_pid); /* pid can only be PID_INIT when creating from idle process */
