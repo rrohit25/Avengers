@@ -80,6 +80,7 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 	kthread_t* new_thread = slab_obj_alloc(kthread_allocator);
 	new_thread->kt_kstack = alloc_stack();
 	new_thread->kt_proc = p;
+	new_thread->kt_state = KT_RUN;
 	list_insert_tail(&p->p_threads, &new_thread->kt_plink);
 	context_setup(&new_thread->kt_ctx, func, 0, NULL, page_alloc(), PAGE_SIZE,
 			p->p_pagedir);
@@ -115,12 +116,14 @@ kthread_cancel(kthread_t *kthr, void *retval)
 {
 	/*NOT_YET_IMPLEMENTED("PROCS: kthread_cancel");*/
 	KASSERT(NULL != kthr);
-	if (kthr->kt_state == KT_SLEEP_CANCELLABLE) {
-		kthr->kt_cancelled = 1;
-	} else if (kthr->kt_state == KT_RUN) {
+	if (kthr == curthr) {
 		kthr->kt_retval = 0; /* normal exit */
 		kthread_exit(kthr->kt_retval);
 		kthr->kt_state = KT_EXITED;
+	} else {
+		if (kthr->kt_state == KT_SLEEP_CANCELLABLE) {
+			kthr->kt_cancelled = 1;
+		}
 	}
 }
 
@@ -139,9 +142,9 @@ kthread_exit(void *retval)
 {
 	/*NOT_YET_IMPLEMENTED("PROCS: kthread_exit");*/
 	proc_thread_exited(retval);
-	KASSERT(!curthr->kt_wchan); /* queue should be empty */
-	KASSERT(!curthr->kt_qlink.l_next && !curthr->kt_qlink.l_prev); /* queue should be empty */
-	KASSERT(curthr->kt_proc == curproc);
+	/*KASSERT(!curthr->kt_wchan);
+	KASSERT(!curthr->kt_qlink.l_next && !curthr->kt_qlink.l_prev);
+	KASSERT(curthr->kt_proc == curproc); */
 }
 
 /*

@@ -148,7 +148,14 @@ proc_cleanup(int status)
 	proc_t *initproc = proc_lookup(1);
 	proc_t *child = NULL;
 	list_t parent_waitlist;
-	parent_waitlist = p->p_pproc->p_wait.tq_list;
+	if(p->p_pid != PID_IDLE && p->p_pid != PID_INIT) {
+		parent_waitlist = p->p_pproc->p_wait.tq_list;
+		if (!list_empty(&parent_waitlist)) {
+				sched_broadcast_on(&curproc->p_pproc->p_wait);
+				/*sched_switch();*/
+
+			}
+	}
 
 	if (!list_empty(&p->p_children)) {
 		list_iterate_begin(&p->p_children, child, proc_t, p_child_link)
@@ -163,12 +170,7 @@ proc_cleanup(int status)
 				}
 	curproc->p_state = PROC_DEAD;
 	curproc->p_status = 0;
-	if (!list_empty(&parent_waitlist)) {
-		sched_broadcast_on(&curproc->p_pproc->p_wait);
-		/*sched_switch();*/
-
-	}
-
+	/*sched_switch();*/
 }
 
 /*

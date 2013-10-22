@@ -224,7 +224,10 @@ sched_switch(void)
 	        uint8_t original_ipl = apic_getipl();
 	        apic_setipl(IPL_HIGH);
 	        kthread_t *prevthread = curthr;
-	        kthread_t *curthread = ktqueue_dequeue(&kt_runq);
+	        kthread_t *curthread = NULL;
+	        if(kt_runq.tq_size != 0) {
+	        	curthread = ktqueue_dequeue(&kt_runq);
+	        }
 	        while(curthread == NULL)
 	        {
 	        	apic_setipl(IPL_LOW);
