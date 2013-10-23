@@ -102,14 +102,6 @@ proc_create(char *name)
 	KASSERT(PID_INIT != pid || PID_IDLE == curproc->p_pid); /* pid can only be PID_INIT when creating from idle process */
 	list_insert_tail(&_proc_list, &new_proc->p_list_link);
 
-	if(pid != PID_IDLE && pid != PID_INIT) {
-	  curproc = new_proc; /* shoould check whether this should be done only for INIT & IDLE */
-
-	}
-    else
-	{
-	   new_proc->p_pproc = NULL;	
-	}
 	if(curproc!=NULL)
 		list_insert_tail(&curproc->p_children, &new_proc->p_child_link);
 	if (pid == PID_INIT) {
@@ -176,7 +168,7 @@ proc_cleanup(int status)
 	curproc->p_status = 0;
 	kthread_destroy(curthr);
 
-	/*sched_switch();*/
+	sched_switch();
 }
 
 /*
@@ -337,7 +329,7 @@ do_waitpid(pid_t pid, int options, int *status)
 		}
 	}
 
-
+return -ECHILD;
 }
 
 /*

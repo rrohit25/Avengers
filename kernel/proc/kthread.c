@@ -88,7 +88,6 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 	list_link_init(&new_thread->kt_qlink);
 	list_link_init(&new_thread->kt_plink);
 	/*context_make_active(&new_thread->kt_ctx);*/
-	curthr = new_thread;
 	return new_thread;
 }
 

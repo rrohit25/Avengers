@@ -101,9 +101,10 @@ void
 sched_sleep_on(ktqueue_t *q)
 {
 	/*NOT_YET_IMPLEMENTED("PROCS: sched_sleep_on");*/
+
 	curthr->kt_state = KT_SLEEP;
         ktqueue_enqueue(q,curthr);
-        sched_switch();
+         sched_switch(); 
 }
 
 
@@ -126,7 +127,7 @@ sched_cancellable_sleep_on(ktqueue_t *q)
 	    }
 
 	    ktqueue_enqueue(q,curthr);
-	    sched_switch();
+	    /* sched_switch(); */
 
 	    return 0;
 
@@ -264,6 +265,6 @@ sched_make_runnable(kthread_t *thr)
     KASSERT(&kt_runq != thr->kt_wchan);
     thr->kt_state = KT_RUN;
     ktqueue_enqueue(&kt_runq,thr);
-	sched_switch();
+	/*sched_switch();*/
     apic_setipl(original_ipl);
 }

@@ -243,7 +243,7 @@ initproc_create(void)
 	proc_t *init_proc = proc_create("INIT");
 	KASSERT(NULL != init_proc);
 	KASSERT(PID_INIT == init_proc->p_pid);
-	kthread_t *init_thread = kthread_create(init_proc,initproc_run,2,NULL);
+	kthread_t *init_thread = kthread_create(init_proc,initproc_run,0,NULL);
 	KASSERT(init_thread != NULL);
 	/*sched_make_runnable(init_thread);*/
 	return init_thread;
