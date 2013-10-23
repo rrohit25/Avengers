@@ -78,12 +78,15 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 	KASSERT(NULL != p); /* should have associated process */
 	kthread_init();
 	kthread_t* new_thread = slab_obj_alloc(kthread_allocator);
+	memset(new_thread,0,sizeof(kthread_t));
 	new_thread->kt_kstack = alloc_stack();
 	new_thread->kt_proc = p;
 	new_thread->kt_state = KT_RUN;
 	list_insert_tail(&p->p_threads, &new_thread->kt_plink);
-	context_setup(&new_thread->kt_ctx, func, 0, NULL, page_alloc(), PAGE_SIZE,
+	context_setup(&new_thread->kt_ctx, func,arg1,arg2,new_thread->kt_kstack, DEFAULT_STACK_SIZE,
 			p->p_pagedir);
+	list_link_init(&new_thread->kt_qlink);
+	list_link_init(&new_thread->kt_plink);
 	/*context_make_active(&new_thread->kt_ctx);*/
 	curthr = new_thread;
 	return new_thread;

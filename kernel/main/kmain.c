@@ -147,7 +147,7 @@ bootstrap(int arg1, void *arg2)
 	curproc = proc_create("IDLE");
 	KASSERT(NULL != curproc); /* make sure that the "idle" process has been created successfully */
 	KASSERT(PID_IDLE == curproc->p_pid); /* make sure that what has been created is the "idle" process */
-	curthr = kthread_create(curproc, idleproc_run, 1, NULL);
+	curthr = kthread_create(curproc, idleproc_run, 0, NULL);
 	KASSERT(NULL != curthr); /* make sure that the thread for the "idle" process has been created successfully */
 	context_make_active(&curthr->kt_ctx);
 
@@ -245,7 +245,7 @@ initproc_create(void)
 	KASSERT(PID_INIT == init_proc->p_pid);
 	kthread_t *init_thread = kthread_create(init_proc,initproc_run,2,NULL);
 	KASSERT(init_thread != NULL);
-	context_make_active(&init_thread->kt_ctx);
+	/*sched_make_runnable(init_thread);*/
 	return init_thread;
 }
 

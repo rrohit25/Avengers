@@ -85,16 +85,18 @@ proc_create(char *name)
 	/*NOT_YET_IMPLEMENTED("PROCS: proc_create");*/
 	pid_t pid = _proc_getid();
 
-	proc_t* new_proc = slab_obj_alloc(proc_allocator);
+	proc_t* new_proc =(proc_t *) slab_obj_alloc(proc_allocator);
 	memset(new_proc, 0, sizeof(proc_t));
 	new_proc->p_pid = pid;
 	new_proc->p_state = PROC_RUNNING;
-        new_proc->p_status = 1;
+        new_proc->p_status = 0;
 	new_proc->p_pproc = curproc;
 	new_proc->p_pagedir = pt_create_pagedir();
 	strcpy(new_proc->p_comm, name);
 	list_init(&new_proc->p_children);
 	list_init(&new_proc->p_threads);
+	list_init(&new_proc->p_child_link);
+	list_init(&new_proc->p_list_link);
 
 	KASSERT(PID_IDLE != pid || list_empty(&_proc_list)); /* pid can only be PID_IDLE if this is the first process */
 	KASSERT(PID_INIT != pid || PID_IDLE == curproc->p_pid); /* pid can only be PID_INIT when creating from idle process */
@@ -102,16 +104,18 @@ proc_create(char *name)
 
 	if(pid != PID_IDLE && pid != PID_INIT) {
 	  curproc = new_proc; /* shoould check whether this should be done only for INIT & IDLE */
-	  list_insert_tail(&curproc->p_children, &new_proc->p_child_link);
+
 	}
-        else
+    else
 	{
 	   new_proc->p_pproc = NULL;	
 	}
-
+	if(curproc!=NULL)
+		list_insert_tail(&curproc->p_children, &new_proc->p_child_link);
 	if (pid == PID_INIT) {
 		proc_initproc = new_proc;
 	}
+	sched_queue_init(&new_proc->p_wait);
 	return new_proc;
 }
 
