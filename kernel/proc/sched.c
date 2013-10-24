@@ -121,19 +121,19 @@ sched_cancellable_sleep_on(ktqueue_t *q)
 		/*NOT_YET_IMPLEMENTED("PROCS: sched_cancellable_sleep_on"); */
 	    /*curthr->kt_state = KT_SLEEP_CANCELLABLE;*/
 
+    	curthr->kt_state = KT_SLEEP_CANCELLABLE;
 		if (curthr->kt_cancelled)
 			    	    {
-			    			kthread_exit(curthr->kt_retval);
+			    			/*kthread_exit(curthr->kt_retval);*/
 			    	        return -EINTR;
 			    	    }
-	    curthr->kt_state = KT_SLEEP_CANCELLABLE;
 	    ktqueue_enqueue(q,curthr);
 	    sched_switch();
-	    if (curthr->kt_cancelled)
+	    /*if (curthr->kt_cancelled)
 	    	    {
-	    			kthread_exit(curthr->kt_retval);
+
 	    	        return -EINTR;
-	    	    }
+	    	    }*/
 	    return 0;
 
 }
@@ -146,6 +146,7 @@ sched_wakeup_on(ktqueue_t *q)
         if (thr != NULL)
         {
         	KASSERT((thr->kt_state == KT_SLEEP) || (thr->kt_state == KT_SLEEP_CANCELLABLE));
+        	thr->kt_state = KT_RUN;
             sched_make_runnable(thr);
         }
         return thr;
@@ -177,7 +178,7 @@ sched_cancel(struct kthread *kthr)
     kthr->kt_cancelled=1;
 	 if(kthr->kt_state == KT_SLEEP_CANCELLABLE)
         {
-
+		 kthr->kt_state = KT_RUN;
 		ktqueue_remove(kthr->kt_wchan, kthr);
 		/*sched_switch();*/
 		sched_make_runnable(kthr);
@@ -225,21 +226,21 @@ sched_switch(void)
 {
         /* NOT_YET_IMPLEMENTED("PROCS: sched_switch"); */
 
-	        uint8_t original_ipl = apic_getipl();
-	        apic_setipl(IPL_HIGH);
+	        uint8_t original_ipl = intr_getipl();
+	        intr_setipl(IPL_HIGH);
 	        kthread_t *prevthread = curthr;
 	        kthread_t *curthread = NULL;
-	        if(kt_runq.tq_size != 0) {
+	        /*if(kt_runq.tq_size != 0) {*/
 	        	curthread = ktqueue_dequeue(&kt_runq);
-	        }
+	        /*}*/
 	        while(curthread == NULL)
 	        {
-	        	apic_setipl(IPL_LOW);
+	        	intr_setipl(IPL_LOW);
 	        	intr_wait();
-	        	apic_setipl(IPL_HIGH);
+	        	intr_setipl(IPL_HIGH);
 	        	curthread = ktqueue_dequeue(&kt_runq);
 	        }
-	        apic_setipl(original_ipl);
+	        intr_setipl(original_ipl);
 	        curproc=curthread->kt_proc;
 	        curthr = curthread;
 	        context_switch(&prevthread->kt_ctx,&curthread->kt_ctx);
@@ -263,11 +264,11 @@ void
 sched_make_runnable(kthread_t *thr)
 {
     /*NOT_YET_IMPLEMENTED("PROCS: sched_make_runnable");*/
-	uint8_t original_ipl = apic_getipl();
-    apic_setipl(IPL_HIGH);
+	uint8_t original_ipl = intr_getipl();
+    intr_setipl(IPL_HIGH);
     KASSERT(&kt_runq != thr->kt_wchan);
     thr->kt_state = KT_RUN;
     ktqueue_enqueue(&kt_runq,thr);
 	/*sched_switch();*/
-    apic_setipl(original_ipl);
+    intr_setipl(original_ipl);
 }
