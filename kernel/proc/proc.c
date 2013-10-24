@@ -140,35 +140,38 @@ proc_cleanup(int status)
 {
 
 	/*NOT_YET_IMPLEMENTED("PROCS: proc_cleanup");*/
+	KASSERT(NULL != proc_initproc); /* should have an "init" process */
+	KASSERT(1 <= curproc->p_pid); /* this process should not be idle process */
+	KASSERT(NULL != curproc->p_pproc); /* this process should have parent process */
 	proc_t *p = curproc;
-	proc_t *initproc = proc_lookup(1);
 	proc_t *child = NULL;
 	list_t parent_waitlist;
-	if(p->p_pid != PID_IDLE && p->p_pid != PID_INIT) {
+	/*if(p->p_pid != PID_IDLE && p->p_pid != PID_INIT) {
 		parent_waitlist = p->p_pproc->p_wait.tq_list;
 		if (!list_empty(&parent_waitlist)) {
-				sched_broadcast_on(&curproc->p_pproc->p_wait);
-				/*sched_switch();*/
+				sched_wakeup_on(&curproc->p_pproc->p_wait);
+				sched_switch(); //not required
 
 			}
-	}
+	}*/
 
 	if (!list_empty(&p->p_children)) {
 		list_iterate_begin(&p->p_children, child, proc_t, p_child_link)
 					{
 						list_remove_head(&p->p_children);
-						list_insert_tail(&initproc->p_children,
+						list_insert_tail(&proc_initproc->p_children,
 								&child->p_list_link);
-						child->p_pproc = initproc;
+						child->p_pproc = proc_initproc;
 
 					}list_iterate_end();
 
 				}
 	curproc->p_state = PROC_DEAD;
 	curproc->p_status = 0;
-	kthread_destroy(curthr);
-
+	/*kthread_destroy(curthr);*/
+	sched_wakeup_on(&curproc->p_pproc->p_wait);
 	sched_switch();
+	KASSERT(NULL != curproc->p_pproc); /* this process should have parent process */
 }
 
 /*
@@ -241,7 +244,7 @@ proc_list()
 void
 proc_thread_exited(void *retval)
 {
-    proc_cleanup(0);
+    proc_cleanup((int)retval);
 	/*NOT_YET_IMPLEMENTED("PROCS: proc_thread_exited");*/
 }
 
@@ -267,6 +270,11 @@ do_waitpid(pid_t pid, int options, int *status)
 	proc_t * cur_child;
 	kthread_t *cur_thread;
 	int thread_destroyed=0;
+	/*log error: not supported*/
+	if(list_empty(&curproc->p_children)){
+		return -ECHILD;
+
+	}
 	if (pid == -1) {
 		/*log error: not supported*/
 		while(1)
@@ -296,13 +304,7 @@ do_waitpid(pid_t pid, int options, int *status)
 
 	thread_destroyed=0;
 	if (pid > 0) {
-		/*log error: not supported*/
-		if(list_empty(&curproc->p_children)){
-			return -ECHILD;
 
-		}
-		while(1)
-		{
 			list_iterate_begin(&curproc->p_children,cur_child,proc_t,p_child_link){
 				if(cur_child->p_pid== pid){
 					sched_sleep_on(&curproc->p_wait);
@@ -324,9 +326,6 @@ do_waitpid(pid_t pid, int options, int *status)
 			if(thread_destroyed==0){
 				return -ECHILD;
 			}
-
-
-		}
 	}
 
 return -ECHILD;

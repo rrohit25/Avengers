@@ -15,6 +15,8 @@
 #include "mm/slab.h"
 #include "mm/page.h"
 
+
+
 kthread_t *curthr; /* global */
 static slab_allocator_t *kthread_allocator = NULL;
 
@@ -82,11 +84,13 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 	new_thread->kt_kstack = alloc_stack();
 	new_thread->kt_proc = p;
 	new_thread->kt_state = KT_RUN;
-	list_insert_tail(&p->p_threads, &new_thread->kt_plink);
+	new_thread->kt_wchan = NULL;
+
 	context_setup(&new_thread->kt_ctx, func,arg1,arg2,new_thread->kt_kstack, DEFAULT_STACK_SIZE,
 			p->p_pagedir);
 	list_link_init(&new_thread->kt_qlink);
 	list_link_init(&new_thread->kt_plink);
+	list_insert_tail(&p->p_threads, &new_thread->kt_plink);
 	/*context_make_active(&new_thread->kt_ctx);*/
 	return new_thread;
 }
@@ -143,10 +147,14 @@ void
 kthread_exit(void *retval)
 {
 	/*NOT_YET_IMPLEMENTED("PROCS: kthread_exit");*/
-	proc_thread_exited(retval);
-	/*KASSERT(!curthr->kt_wchan);
+
+	curthr->kt_state = KT_EXITED;
+	curthr->kt_retval = retval;
+	KASSERT(!curthr->kt_wchan);
 	KASSERT(!curthr->kt_qlink.l_next && !curthr->kt_qlink.l_prev);
-	KASSERT(curthr->kt_proc == curproc); */
+	KASSERT(curthr->kt_proc == curproc);
+	proc_thread_exited(retval);
+
 }
 
 /*

@@ -249,20 +249,20 @@ initproc_create(void)
 	return init_thread;
 }
 
-void faber_test() {
+int faber_test(kshell_t* kshell, int argc, char **argv) {
 
 	testproc(0, NULL);
-	return;
+	return 0;
 }
 
-void pc_test() {
-	sunghan_test();
-	return;
+int pc_test(kshell_t* kshell, int argc, char **argv) {
+	sunghan_test(0, NULL);
+	return 0;
 }
 
-void deadlock_test() {
+int deadlock_test(kshell_t* kshell, int argc, char **argv) {
 	sunghan_deadlock_test(0,NULL);
-	return;
+	return 0;
 }
 
 /**
