@@ -121,14 +121,16 @@ sched_cancellable_sleep_on(ktqueue_t *q)
 		/*NOT_YET_IMPLEMENTED("PROCS: sched_cancellable_sleep_on"); */
 	    /*curthr->kt_state = KT_SLEEP_CANCELLABLE;*/
 
-	    if (curthr->kt_cancelled)
-	    {
-	        return -EINTR;
-	    }
+		kthread_t * temp = curthr;
 
+	    curthr->kt_state = KT_SLEEP_CANCELLABLE;
 	    ktqueue_enqueue(q,curthr);
-	    /* sched_switch(); */
-
+	    sched_switch();
+	    if (curthr->kt_cancelled)
+	    	    {
+	    			kthread_exit(temp->kt_retval);
+	    	        return -EINTR;
+	    	    }
 	    return 0;
 
 }
@@ -140,8 +142,8 @@ sched_wakeup_on(ktqueue_t *q)
         kthread_t *thr = ktqueue_dequeue(q);
         if (thr != NULL)
         {
-                KASSERT((thr->kt_state == KT_SLEEP) || (thr->kt_state == KT_SLEEP_CANCELLABLE));
-                sched_make_runnable(thr);
+        	KASSERT((thr->kt_state == KT_SLEEP) || (thr->kt_state == KT_SLEEP_CANCELLABLE));
+            sched_make_runnable(thr);
         }
         return thr;
 }

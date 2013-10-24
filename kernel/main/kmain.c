@@ -249,8 +249,19 @@ initproc_create(void)
 	return init_thread;
 }
 
-void test() {
+void faber_test() {
 
+	testproc(0, NULL);
+	return;
+}
+
+void pc_test() {
+	sunghan_test();
+	return;
+}
+
+void deadlock_test() {
+	sunghan_deadlock_test(0,NULL);
 	return;
 }
 
@@ -270,16 +281,17 @@ initproc_run(int arg1, void *arg2)
 {
 	/*NOT_YET_IMPLEMENTED("PROCS: initproc_run");*/
 
-/*#ifdef __DRIVERS__
+#ifdef __DRIVERS__
 
-	kshell_add_command("help", test, "invoke testproc()...");
-
+	kshell_add_command("pct",pc_test, "Producer Consumer test");
+	kshell_add_command("deadlock", deadlock_test, "Deadlock test");
+	kshell_add_command("testproc", faber_test, "Faber test");
 	kshell_t *kshell = kshell_create(0);
 	if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
 	while (kshell_execute_next(kshell));
 	kshell_destroy(kshell);
 
-#endif */  /* __DRIVERS__ */
+#endif  /* __DRIVERS__ */
 
 	return NULL;
 }
