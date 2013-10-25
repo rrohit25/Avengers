@@ -99,7 +99,7 @@ proc_create(char *name)
 	list_link_init(&new_proc->p_list_link);
 
 	KASSERT(PID_IDLE != pid || list_empty(&_proc_list)); /* pid can only be PID_IDLE if this is the first process */
-	dbg_print("proc.c: proc_create: For the first process the pid is PID_IDLE\n");
+	dbg_print("proc.c: proc_create: For the first process(idle process) the pid is PID_IDLE\n");
 	KASSERT(PID_INIT != pid || PID_IDLE == curproc->p_pid); /* pid can only be PID_INIT when creating from idle process */
 	dbg_print("proc.c: proc_create: pid is PID_INT when init process (child of idle process) is being created\n");
 	list_insert_tail(&_proc_list, &new_proc->p_list_link);
