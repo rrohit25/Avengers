@@ -146,8 +146,9 @@ bootstrap(int arg1, void *arg2)
         /*NOT_YET_IMPLEMENTED("PROCS: bootstrap");*/
 	curproc = proc_create("IDLE");
 	KASSERT(NULL != curproc); /* make sure that the "idle" process has been created successfully */
-	KASSERT(PID_IDLE == curproc->p_pid); /* make sure that what has been created is the "idle" process */
 	dbg_print("kmain.c: bootstrap: The idle process has been created successfully\n");
+	KASSERT(PID_IDLE == curproc->p_pid); /* make sure that what has been created is the "idle" process */
+	dbg_print("kmain.c: bootstrap: The pid of the current process is PID_IDLE\n");
 	curthr = kthread_create(curproc, idleproc_run, 0, NULL);
 	KASSERT(NULL != curthr); /* make sure that the thread for the "idle" process has been created successfully */
 	dbg_print("kmain.c: bootstrap: The thread for the IDLE process has been created successfully\n");
@@ -244,11 +245,12 @@ initproc_create(void)
         /*NOT_YET_IMPLEMENTED("PROCS: initproc_create");*/
 	proc_t *init_proc = proc_create("INIT");
 	KASSERT(NULL != init_proc);
-	KASSERT(PID_INIT == init_proc->p_pid);
 	dbg_print("kmain.c:initproc_create: init_proc has been created successfully\n ");
+	KASSERT(PID_INIT == init_proc->p_pid);
+	dbg_print("kmain.c:initproc_create: init_proc PID is equal to PID_INIT\n ");
 	kthread_t *init_thread = kthread_create(init_proc,initproc_run,0,NULL);
 	KASSERT(init_thread != NULL);
-	dbg_print("kmain.c:initproc_create: init_thread has been created successfully\n ");
+	dbg_print("kmain.c:initproc_create: init_thread has been created successfully and is valid\n ");
 	/*sched_make_runnable(init_thread);*/
 	return init_thread;
 }
