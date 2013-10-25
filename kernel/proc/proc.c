@@ -297,6 +297,8 @@ do_waitpid(pid_t pid, int options, int *status)
 	   				list_remove(&cur_child->p_list_link);
 	   				KASSERT(NULL != cur_child->p_pagedir);
 	   				dbg_print("proc.c: do_waitpid: current process's pagedir is not NULL\n");
+	   				pt_destroy_pagedir(cur_child->p_pagedir);
+	   				slab_obj_free(proc_allocator,cur_child);
 	   				return(cur_child->p_pid);
 	   			}
 			}list_iterate_end();
@@ -329,6 +331,8 @@ do_waitpid(pid_t pid, int options, int *status)
 	   			list_remove(&cur_child->p_list_link);
 	   			KASSERT(NULL != cur_child->p_pagedir);
 	   			dbg_print("proc.c: do_waitpid: current process's pagedir is not NULL\n");
+	   			pt_destroy_pagedir(cur_child->p_pagedir);
+	   			slab_obj_free(proc_allocator,cur_child);
 	   			return(cur_child->p_pid);
 	   		}
 		}list_iterate_end();
