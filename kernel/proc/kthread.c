@@ -78,7 +78,7 @@ kthread_create(struct proc *p, kthread_func_t func, long arg1, void *arg2)
 {
 	/*NOT_YET_IMPLEMENTED("PROCS: kthread_create");*/
 	KASSERT(NULL != p); /* should have associated process */
-	dbg_print("kthread.c:kthread_create: (precondition)The process for which the thread is created is not NULL/n");
+	dbg_print("kthread.c:kthread_create: (precondition)The process for which the thread is created is not NULL\n");
 	kthread_init();
 	kthread_t* new_thread = slab_obj_alloc(kthread_allocator);
 	memset(new_thread,0,sizeof(kthread_t));
@@ -123,7 +123,7 @@ kthread_cancel(kthread_t *kthr, void *retval)
 {
 	/*NOT_YET_IMPLEMENTED("PROCS: kthread_cancel");*/
 	KASSERT(NULL != kthr);
-	dbg_print("kthread.c:kthread_cancel: (precondition) kthr is not NULL\n");
+	dbg_print("kthread.c:kthread_cancel: (precondition) Cancelling thread is not NULL\n");
 	if (kthr == curthr) {
 		kthr->kt_retval = 0; /* normal exit */
 		kthread_exit(kthr->kt_retval);
@@ -153,9 +153,11 @@ kthread_exit(void *retval)
 	curthr->kt_state = KT_EXITED;
 	curthr->kt_retval = retval;
 	KASSERT(!curthr->kt_wchan);
+	dbg_print("kthread.c:kthread_exit: kt_wchan queue is empty\n");
 	KASSERT(!curthr->kt_qlink.l_next && !curthr->kt_qlink.l_prev);
+	dbg_print("kthread.c:kthread_exit: qlink is empty\n");
 	KASSERT(curthr->kt_proc == curproc);
-	dbg_print("kthread.c:kthread_exit: Queue is empty\n");
+	dbg_print("kthread.c:kthread_exit: Current thread has its parent as the current process\n");
 	proc_thread_exited(retval);
 
 }
