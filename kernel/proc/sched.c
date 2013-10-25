@@ -103,8 +103,8 @@ sched_sleep_on(ktqueue_t *q)
 	/*NOT_YET_IMPLEMENTED("PROCS: sched_sleep_on");*/
 
 	curthr->kt_state = KT_SLEEP;
-        ktqueue_enqueue(q,curthr);
-         sched_switch(); 
+	ktqueue_enqueue(q, curthr);
+	sched_switch();
 }
 
 
@@ -118,38 +118,36 @@ sched_sleep_on(ktqueue_t *q)
 int
 sched_cancellable_sleep_on(ktqueue_t *q)
 {
-		/*NOT_YET_IMPLEMENTED("PROCS: sched_cancellable_sleep_on"); */
-	    /*curthr->kt_state = KT_SLEEP_CANCELLABLE;*/
+	/*NOT_YET_IMPLEMENTED("PROCS: sched_cancellable_sleep_on"); */
+	/*curthr->kt_state = KT_SLEEP_CANCELLABLE;*/
 
-    	curthr->kt_state = KT_SLEEP_CANCELLABLE;
-		if (curthr->kt_cancelled)
-			    	    {
-			    			/*kthread_exit(curthr->kt_retval);*/
-			    	        return -EINTR;
-			    	    }
-	    ktqueue_enqueue(q,curthr);
-	    sched_switch();
-	    /*if (curthr->kt_cancelled)
-	    	    {
+	curthr->kt_state = KT_SLEEP_CANCELLABLE;
+	if (curthr->kt_cancelled) {
+		/*kthread_exit(curthr->kt_retval);*/
+		return -EINTR;
+	}
+	ktqueue_enqueue(q, curthr);
+	sched_switch();
+	/*if (curthr->kt_cancelled)
+	 {
 
-	    	        return -EINTR;
-	    	    }*/
-	    return 0;
-
+	 return -EINTR;
+	 }*/
+	return 0;
 }
 
 kthread_t *
 sched_wakeup_on(ktqueue_t *q)
 {
-        /*NOT_YET_IMPLEMENTED("PROCS: sched_wakeup_on");*/
-        kthread_t *thr = ktqueue_dequeue(q);
-        if (thr != NULL)
-        {
-        	KASSERT((thr->kt_state == KT_SLEEP) || (thr->kt_state == KT_SLEEP_CANCELLABLE));
-        	thr->kt_state = KT_RUN;
-            sched_make_runnable(thr);
-        }
-        return thr;
+	/*NOT_YET_IMPLEMENTED("PROCS: sched_wakeup_on");*/
+	kthread_t *thr = ktqueue_dequeue(q);
+	if (thr != NULL) {
+		KASSERT((thr->kt_state == KT_SLEEP) || (thr->kt_state == KT_SLEEP_CANCELLABLE));
+		dbg_print("sched.c: sched_wakeup_on: Thread is either in sleep or sleep cancellable state before it is made runnable");
+		thr->kt_state = KT_RUN;
+		sched_make_runnable(thr);
+	}
+	return thr;
 }
 
 void
@@ -267,6 +265,7 @@ sched_make_runnable(kthread_t *thr)
 	uint8_t original_ipl = intr_getipl();
     intr_setipl(IPL_HIGH);
     KASSERT(&kt_runq != thr->kt_wchan);
+    dbg_print("sched.c: sched_make_runnable: Thread is not in run queue");
     thr->kt_state = KT_RUN;
     ktqueue_enqueue(&kt_runq,thr);
 	/*sched_switch();*/
