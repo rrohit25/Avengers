@@ -264,10 +264,10 @@ int pc_test(kshell_t* kshell, int argc, char **argv) {
 	return 0;
 }
 
-/*int deadlock_test(kshell_t* kshell, int argc, char **argv) {
+int deadlock_test(kshell_t* kshell, int argc, char **argv) {
 	sunghan_deadlock_test(0,NULL);
 	return 0;
-}*/
+}
 
 /**
  * The init thread's function changes depending on how far along your Weenix is
@@ -288,7 +288,7 @@ initproc_run(int arg1, void *arg2)
 #ifdef __DRIVERS__
 
 	kshell_add_command("pct",pc_test, "Producer Consumer test");
-	/*kshell_add_command("deadlock", deadlock_test, "Deadlock test");*/
+	kshell_add_command("deadlock", deadlock_test, "Deadlock test");
 	kshell_add_command("testproc", faber_test, "Faber test");
 	kshell_t *kshell = kshell_create(0);
 	if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
