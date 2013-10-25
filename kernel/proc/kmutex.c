@@ -31,6 +31,7 @@ kmutex_lock(kmutex_t *mtx)
 {
 	/* NOT_YET_IMPLEMENTED("PROCS: kmutex_lock");*/
 	KASSERT(curthr && (curthr != mtx->km_holder));
+	dbg_print("kmutex.c:kmutex_lock: (pre-condition)Thread has not locked the mutex\n");
 	if (mtx->km_holder == NULL) {
 		mtx->km_holder = curthr;
 
@@ -48,22 +49,24 @@ int
 kmutex_lock_cancellable(kmutex_t *mtx)
 {
 	KASSERT(curthr && (curthr != mtx->km_holder));
-	int sleep_returnval = 0;
+	dbg_print("kmutex.c:kmutex_lock_cancellable: (pre-condition)Thread has not locked the mutex\n");
 
-	if (mtx->km_holder != NULL) {
-		if ((sleep_returnval = (sched_cancellable_sleep_on(&mtx->km_waitq)))
-				!= -EINTR) {
+
+	if (mtx->km_holder != NULL)
+	{
+		if ((sched_cancellable_sleep_on(&mtx->km_waitq))!= -EINTR)
+		{
 			mtx->km_holder = curthr;
 			return 0;
-		} else {
-			mtx->km_holder = NULL;
-			return -EINTR;
 		}
-	} else {
+
+	}
+	else
+	{
 		mtx->km_holder = curthr;
 		return 0;
 	}
-	return sleep_returnval;
+	return -EINTR;
 }
 
 /*
@@ -84,7 +87,9 @@ void
 kmutex_unlock(kmutex_t *mtx)
 {
 	KASSERT(curthr && (curthr == mtx->km_holder));
-	if (!sched_queue_empty(&mtx->km_waitq)) {
+	dbg_print("kmutex.c:kmutex_unlock: (pre-condition)Thread has not locked the mutex\n");
+	if (!sched_queue_empty(&mtx->km_waitq))
+	{
 		kthread_t * New = sched_wakeup_on(&mtx->km_waitq);
 		mtx->km_holder = New;
 		/*sched_make_runnable(New);*/
@@ -93,4 +98,5 @@ kmutex_unlock(kmutex_t *mtx)
 		mtx->km_holder = NULL;
 	}
 	KASSERT(curthr != mtx->km_holder);
+	dbg_print("kmutex.c: kmutex_unlock: (post-condition)The current thread was on the waitq\n");
 }
