@@ -147,8 +147,10 @@ bootstrap(int arg1, void *arg2)
 	curproc = proc_create("IDLE");
 	KASSERT(NULL != curproc); /* make sure that the "idle" process has been created successfully */
 	KASSERT(PID_IDLE == curproc->p_pid); /* make sure that what has been created is the "idle" process */
+	dbg_print("kmain.c: bootstrap: The idle process has been created successfully\n");
 	curthr = kthread_create(curproc, idleproc_run, 0, NULL);
 	KASSERT(NULL != curthr); /* make sure that the thread for the "idle" process has been created successfully */
+	dbg_print("kmain.c: bootstrap: The thread for the IDLE process has been created successfully\n");
 	context_make_active(&curthr->kt_ctx);
 
         panic("weenix returned to bootstrap()!!! BAD!!!\n");
@@ -243,8 +245,10 @@ initproc_create(void)
 	proc_t *init_proc = proc_create("INIT");
 	KASSERT(NULL != init_proc);
 	KASSERT(PID_INIT == init_proc->p_pid);
+	dbg_print("kmain.c:initproc_create: init_proc has been created successfully\n ");
 	kthread_t *init_thread = kthread_create(init_proc,initproc_run,0,NULL);
 	KASSERT(init_thread != NULL);
+	dbg_print("kmain.c:initproc_create: init_thread has been created successfully\n ");
 	/*sched_make_runnable(init_thread);*/
 	return init_thread;
 }
