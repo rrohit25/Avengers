@@ -211,7 +211,7 @@ proc_kill_all()
         /*NOT_YET_IMPLEMENTED("PROCS: proc_kill_all");*/
 	proc_t *proc;
 	list_iterate_begin(&_proc_list, proc, proc_t, p_list_link) {
-		if(proc != proc_initproc) {
+		if(proc != proc_initproc && proc->p_pid != PID_IDLE) {
 			proc_kill(proc, proc->p_status);
 		}
 	}list_iterate_end();
