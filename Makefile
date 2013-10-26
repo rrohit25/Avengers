@@ -26,8 +26,9 @@ procs-submit:
 		kernel/proc/kmutex.c \
 		kernel/proc/kthread.c \
 		kernel/proc/proc.c \
-		kernel/proc/sched.c
-
+		kernel/proc/sched.c \
+		kernel/include/globals.h
+		
 vfs-submit:
 	tar cvzf vfs-submit.tar.gz \
 		Config.mk \
