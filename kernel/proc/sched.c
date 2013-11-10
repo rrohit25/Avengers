@@ -143,7 +143,7 @@ sched_wakeup_on(ktqueue_t *q)
 	kthread_t *thr = ktqueue_dequeue(q);
 	if (thr != NULL) {
 		KASSERT((thr->kt_state == KT_SLEEP) || (thr->kt_state == KT_SLEEP_CANCELLABLE));
-		dbg_print("sched.c: sched_wakeup_on: Thread is either in sleep or sleep cancellable state before it is made runnable");
+		dbg_print("sched.c: sched_wakeup_on: Thread is either in sleep or sleep cancellable state before it is made runnable\n");
 		thr->kt_state = KT_RUN;
 		sched_make_runnable(thr);
 	}
@@ -262,10 +262,10 @@ void
 sched_make_runnable(kthread_t *thr)
 {
     /*NOT_YET_IMPLEMENTED("PROCS: sched_make_runnable");*/
+	KASSERT(&kt_runq != thr->kt_wchan);
+	dbg_print("sched.c: sched_make_runnable: (pre-condition)Thread is not blocked\n");
 	uint8_t original_ipl = intr_getipl();
     intr_setipl(IPL_HIGH);
-    KASSERT(&kt_runq != thr->kt_wchan);
-    dbg_print("sched.c: sched_make_runnable: Thread is not in run queue");
     thr->kt_state = KT_RUN;
     ktqueue_enqueue(&kt_runq,thr);
 	/*sched_switch();*/
