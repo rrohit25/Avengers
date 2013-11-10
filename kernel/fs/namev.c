@@ -25,8 +25,31 @@
 int
 lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 {
-        NOT_YET_IMPLEMENTED("VFS: lookup");
-        return 0;
+    /*NOT_YET_IMPLEMENTED("VFS: lookup");l*/
+	KASSERT(NULL != dir);
+	KASSERT(NULL != name);
+	KASSERT(NULL != result);
+	int ret;
+
+	/*special case for "." and ".."*/
+	if(strcmp(name,".")) {
+		(*result) = dir;
+		return 0;
+	} else if(strcmp(name,"..")) {
+		/*set result with its parent*/
+		return 0;
+	}
+
+	if(dir->vn_ops->lookup == NULL) {
+		return -ENOTDIR;
+	}
+	ret = dir->vn_ops->lookup(dir,name,len,result);
+
+	if(ret < 0){
+		return ret;
+	}
+	vget((*result)->vn_fs,(*result)->vn_vno);
+	return 0;
 }
 
 
@@ -52,8 +75,50 @@ int
 dir_namev(const char *pathname, size_t *namelen, const char **name,
           vnode_t *base, vnode_t **res_vnode)
 {
-        NOT_YET_IMPLEMENTED("VFS: dir_namev");
-        return 0;
+	/*NOT_YET_IMPLEMENTED("VFS: dir_namev");*/
+	KASSERT(NULL != pathname);
+	KASSERT(NULL != namelen);
+	KASSERT(NULL != name);
+	KASSERT(NULL != res_vnode);
+
+	int ret = 0;
+	vnode_t **result;
+	vnode_t* dir;
+	if (pathname[0] == '/') {
+		dir = vfs_root_vn;
+	} else if (base == NULL) {
+		dir = curproc->p_cwd;
+	} else {
+		dir = base;
+	}
+	char path[1024];
+	strcpy(path, pathname);
+	char* start = path;
+	char* ptr = NULL;
+	while (start != NULL) {
+		ptr = strchr(start, '/');
+		if (ptr == NULL) {
+			/*This should be executed only for the last component*/
+			ret = lookup(dir, &name, strlen(start), result);
+			if (ret != 0) {
+				return ret;
+			}
+			vput(result);
+			return ret;
+		} else {
+			*ptr++ = '\0';
+		}
+		/*You have to pass right name and namelen parameters (the directories in path)*/
+		ret = lookup(dir, &start, strlen(start), result);
+		if (ret != 0) {
+			return ret;
+		}
+		KASSERT(NULL != result);
+		vput(result);
+		start = ptr;
+	}
+
+	return 0;
 }
 
 /* This returns in res_vnode the vnode requested by the other parameters.
