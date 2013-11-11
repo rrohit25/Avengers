@@ -185,13 +185,31 @@ idleproc_run(int arg1, void *arg2)
         /* Create other kernel threads (in order) */
 
 #ifdef __VFS__
-        /* Once you have VFS remember to set the current working directory
-         * of the idle and init processes */
+	/* Once you have VFS remember to set the current working directory
+	 * of the idle and init processes */
 
-        /* Here you need to make the null, zero, and tty devices using mknod */
-        /* You can't do this until you have VFS, check the include/drivers/dev.h
-         * file for macros with the device ID's you will need to pass to mknod */
-        NOT_YET_IMPLEMENTED("VFS: idleproc_run");
+	proc_t *init_proc = proc_lookup(PID_INIT);
+	proc_t *idle_proc = proc_lookup(PID_IDLE);
+	init_proc->p_cwd = vfs_root_vn;
+	idle_proc->p_cwd = vfs_root_vn;
+
+	/* Here you need to make the null, zero, and tty devices using mknod */
+	/* You can't do this until you have VFS, check the include/drivers/dev.h
+	 * file for macros with the device ID's you will need to pass to mknod */
+	/*NOT_YET_IMPLEMENTED("VFS: idleproc_run");*/
+	/*int mkdir_dev = 0;
+	mkdir_dev = ;*/
+	if( do_mkdir("/dev") != 0) {
+		panic("MKDIR failed\n");
+	} else if(do_mknod("/dev/null", S_IFCHR, MKDEVID(1, 0)) != 0) {
+		panic("MKNOD failed for /dev/null\n");
+	} else if(do_mknod("/dev/zero", S_IFCHR, MKDEVID(1, 1)) != 0) {
+		panic("MKNOD failed for /dev/zero\n");
+	} else if(do_mknod("/dev/tty0", S_IFCHR, MKDEVID(2, 0)) != 0) {
+		panic("MKNOD failed for /dev/tty0\n");
+	} else if(do_mknod("/dev/tty1", S_IFCHR, MKDEVID(2, 1)) != 0) {
+		panic("MKNOD failed for /dev/tty1\n");
+	}
 #endif
 
         /* Finally, enable interrupts (we want to make sure interrupts

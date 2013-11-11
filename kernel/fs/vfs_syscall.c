@@ -320,15 +320,17 @@ do_mkdir(const char *path)
 
 	vnode_t *result;
 	ret = lookup(res_vnode, name, namelen, &result);
-	vput(result);
 	if( ret == 0 ) {
+		vput(result);
 		return -EEXIST;
 	} else if(result == NULL) {
 		return -ENOENT;
 	}
 
 	KASSERT(NULL != (res_vnode)->vn_ops->mkdir);
-	return (res_vnode)->vn_ops->mkdir(res_vnode,name,namelen);
+	ret = (res_vnode)->vn_ops->mkdir(res_vnode,name,namelen);
+	vput(res_vnode);
+	return ret;
 
 }
 
@@ -398,8 +400,39 @@ do_rmdir(const char *path)
 int
 do_unlink(const char *path)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_unlink");
-        return -1;
+	/* NOT_YET_IMPLEMENTED("VFS: do_unlink"); */
+	const char *name;
+	size_t len = 0;
+	int returnval = 0;
+	vnode_t *res_childvnode = NULL;
+	vnode_t *res_parentvnode = NULL;
+	if (strlen(path) > MAXPATHLEN) {
+		return -ENAMETOOLONG;
+	}
+
+	returnval = dir_namev(path, &len, &name, NULL, &res_parentvnode);
+	if (returnval < 0) {
+		vput(res_parentvnode);
+		return returnval;
+	}
+
+	returnval = lookup(res_parentvnode, name, len, &res_childvnode);
+	if (returnval < 0) {
+		vput(res_parentvnode);
+		return returnval;
+	}
+
+	if (S_ISDIR(res_childvnode->vn_mode)) {
+
+		vput(res_childvnode);
+		return -EISDIR;
+	}
+
+	KASSERT(NULL != res_parentvnode->vn_ops->unlink);
+
+	returnval = res_parentvnode->vn_ops->unlink(res_parentvnode, name, len);
+	vput(res_parentvnode);
+	return returnval;
 }
 
 /* To link:
@@ -424,8 +457,50 @@ do_unlink(const char *path)
 int
 do_link(const char *from, const char *to)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_link");
-        return -1;
+	/* NOT_YET_IMPLEMENTED("VFS: do_link");*/
+	const char *name;
+	vnode_t *res_parentvnode = NULL;
+	vnode_t *res_childvnode = NULL;
+	size_t len = 0;
+	int returnval = 0;
+	int flag = 0;
+	if (strlen(from) > MAXPATHLEN) {
+		return -ENAMETOOLONG;
+	}
+	if (strlen(to) > MAXPATHLEN) {
+		return -ENAMETOOLONG;
+	}
+	returnval = open_namev(from, flag, &res_parentvnode, NULL);
+	if (returnval < 0) {
+		return returnval;
+	}
+
+	returnval = dir_namev(to, &len, &name, NULL, &res_childvnode);
+	if (returnval < 0) {
+		vput(res_parentvnode);
+		return returnval;
+	}
+	vput(res_childvnode);
+	returnval = lookup(res_childvnode, name, len, &res_childvnode);
+	if (!S_ISDIR(res_childvnode->vn_mode)) {
+		vput(res_childvnode);
+		return -EISDIR;
+	}
+	switch (returnval) {
+	case 0:
+		vput(res_childvnode);
+		vput(res_parentvnode);
+		return -EEXIST;
+	case -ENOENT:
+		returnval = res_childvnode->vn_ops->link(res_parentvnode,
+				res_childvnode, name, len);
+		vput(res_parentvnode);
+		return returnval;
+	default:
+		vput(res_parentvnode);
+		return returnval;
+	}
+	return -1;
 }
 
 /*      o link newname to oldname
@@ -511,8 +586,27 @@ do_chdir(const char *path)
 int
 do_getdent(int fd, struct dirent *dirp)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_getdent");
-        return -1;
+	if (fd < 0 || fd > NFILES)
+		return -EBADF;
+	file_t *fileDescriptor = fget(fd);
+	if (fileDescriptor != NULL) {
+		fput(fileDescriptor);
+		if (!S_ISDIR(fileDescriptor->f_vnode->vn_mode))
+			return -ENOTDIR;
+		else {
+			int num_bytes = fileDescriptor->f_vnode->vn_ops->readdir(
+					fileDescriptor->f_vnode, fileDescriptor->f_pos, dirp);
+			if (num_bytes == 0) {
+				return 0;
+			}
+			fileDescriptor->f_pos += num_bytes;
+			fput(fileDescriptor);
+			return sizeof(*dirp);
+		}
+
+	}
+	return -EBADF;
+
 }
 
 /*
@@ -569,12 +663,33 @@ do_lseek(int fd, int offset, int whence)
  *      o ENAMETOOLONG
  *        A component of path was too long.
  */
-int
-do_stat(const char *path, struct stat *buf)
+int do_stat(const char *path, struct stat *buf)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_stat");
-        return -1;
+	/* NOT_YET_IMPLEMENTED("VFS: do_stat");*/
+	int returnval = 0;
+	size_t namelength = 0;
+	const char *name = NULL;
+	vnode_t *res_vnode = NULL;
+	if (strlen(path) > MAXPATHLEN) {
+		return -ENAMETOOLONG;
+	}
+	returnval = dir_namev(path, &namelength, &name, NULL, &res_vnode);
+
+	if (returnval < 0) {
+		return returnval;
+	}
+	vput(res_vnode);
+
+	returnval = lookup(res_vnode, name, namelength, &res_vnode);
+	if (returnval < 0) {
+		return returnval;
+	}
+	KASSERT(NULL != res_vnode->vn_ops->stat);
+	returnval = res_vnode->vn_ops->stat(res_vnode, buf);
+	vput(res_vnode);
+	return returnval;
 }
+
 
 #ifdef __MOUNTING__
 /*

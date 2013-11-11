@@ -32,10 +32,10 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 	int ret;
 
 	/*special case for "." and ".."*/
-	if(strcmp(name,".")) {
+	if(!strcmp(name,".")) {
 		(*result) = dir;
 		return 0;
-	} else if(strcmp(name,"..")) {
+	} else if(!strcmp(name,"..")) {
 		/*set result with its parent*/
 		return 0;
 	}
@@ -82,43 +82,52 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 	KASSERT(NULL != res_vnode);
 
 	int ret = 0;
-	vnode_t **result;
+	vnode_t *result;
 	vnode_t* dir;
+	char* startPtr = (char*) pathname;
+	char* breakPtr = (char*) pathname;
+	char* endPtr = (char*) pathname + strlen(pathname);
+
+	/*check if length check needed if not you can remove it
+	if(strlen(pathname) == 0) {
+		return -EINVAL;
+	} else if(strlen(pathname) > MAXPATHLEN) {
+		return -ENAMETOOLONG;
+	} */
+
 	if (pathname[0] == '/') {
 		dir = vfs_root_vn;
+		startPtr++;
+		breakPtr++;
 	} else if (base == NULL) {
 		dir = curproc->p_cwd;
 	} else {
 		dir = base;
 	}
-	char path[1024];
-	strcpy(path, pathname);
-	char* start = path;
-	char* ptr = NULL;
-	while (start != NULL) {
-		ptr = strchr(start, '/');
-		if (ptr == NULL) {
-			/*This should be executed only for the last component*/
-			ret = lookup(dir, &name, strlen(start), result);
-			if (ret != 0) {
+
+	while (breakPtr != endPtr) {
+		breakPtr = strchr(startPtr, '/');
+		if(breakPtr != NULL) {
+			if(dir == NULL) {
+				return -ENOENT;
+			}
+			int ret = lookup(dir, startPtr, breakPtr-startPtr, &result);
+			vput(dir);
+			if(ret < 0) {
 				return ret;
 			}
-			vput(result);
-			return ret;
+			dir = result;
+			breakPtr++;
+			startPtr = breakPtr;
 		} else {
-			*ptr++ = '\0';
+			break;
 		}
-		/*You have to pass right name and namelen parameters (the directories in path)*/
-		ret = lookup(dir, &start, strlen(start), result);
-		if (ret != 0) {
-			return ret;
-		}
-		KASSERT(NULL != result);
-		vput(result);
-		start = ptr;
 	}
-
+	*res_vnode = dir;
+	*name = (const char*) startPtr;
+	*namelen = endPtr-startPtr;
 	return 0;
+
 }
 
 /* This returns in res_vnode the vnode requested by the other parameters.
@@ -132,8 +141,24 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 int
 open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 {
-        NOT_YET_IMPLEMENTED("VFS: open_namev");
-        return 0;
+	KASSERT(NULL != pathname);
+	KASSERT(NULL != res_vnode);
+
+	const char *name;
+	size_t len;
+
+	int errno= dir_namev(pathname,&len,&name,base,res_vnode);
+	if ( errno >= 0) {
+		vput(*res_vnode);
+		errno = lookup(*res_vnode, name, len, res_vnode);
+		if ( errno == -ENOENT && (flag & O_CREAT) == O_CREAT) {
+			errno = (*res_vnode)->vn_ops->create(*res_vnode, name, len,
+					res_vnode);
+			KASSERT(NULL != (*res_vnode)->vn_ops->create);
+
+		}
+	}
+	return errno;
 }
 
 #ifdef __GETCWD__
