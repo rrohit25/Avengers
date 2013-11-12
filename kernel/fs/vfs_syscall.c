@@ -52,22 +52,26 @@ do_read(int fd, void *buf, size_t nbytes)
 
 		return -EBADF;
 	  }
+	  if((fp->f_mode & 1) != FMODE_READ)
+	  {
+		  fput(fp);
+		  return -EBADF;
+	  }
 	  if(fp->f_vnode && S_ISDIR(fp->f_vnode->vn_mode))
 	  {
 		err = -EISDIR;
 		return err;
 	  }
 	  /* a valid file */
-	  fp->f_mode = FMODE_READ;
-	  fp->f_pos = 0;
-	  bytes_read = fp->f_vnode->vn_ops->read(fp->f_vnode,0,buf,nbytes);
+	  bytes_read = fp->f_vnode->vn_ops->read(fp->f_vnode,fp->f_pos,buf,nbytes);
 	  if(bytes_read == 0)
 	  {
 		/* need to check which error to return */
-		return -1;
+		return bytes_read;
 	  }
 	  if (NULL != fp)
 	  {
+		fp->f_pos=fp->f_pos + bytes_read;
 		fput(fp);
 	  }
 	  return bytes_read;
@@ -87,14 +91,15 @@ do_write(int fd, const void *buf, size_t nbytes)
 
 	  file_t *fp = fget(fd);
 	  int err;
-	  if((NULL == fp) ||
-	 	(FMODE_WRITE == fp->f_mode))
-	  {
-		/* not a valid file or the file does not
-	 	* have write permission
-	 	*/
-		return EBADF;
-	  }
+	if(NULL == fp)
+	{
+		return -EBADF;
+	}
+	if((fp->f_mode & 2) != FMODE_WRITE)
+	{
+	  fput(fp);
+	  return -EBADF;
+	}
 	  if(fp->f_vnode && S_ISDIR(fp->f_vnode->vn_mode))
 	  {
 		err = -EISDIR;
@@ -108,11 +113,14 @@ do_write(int fd, const void *buf, size_t nbytes)
 	  	fput(fp);
 	  	return -1; /* need to check this value */
 		}
+		fp->f_pos = err;
 	  }
+
 	  bytes_wrote = fp->f_vnode->vn_ops->write(fp->f_vnode,0,buf,nbytes);
+	  fp->f_pos = fp->f_pos + bytes_wrote;
 	  if(0 > bytes_wrote )
 	  {
-		return -1;
+		return bytes_wrote;
 	  }
 	  if (NULL != fp)
 	  {
@@ -132,8 +140,21 @@ do_write(int fd, const void *buf, size_t nbytes)
 int
 do_close(int fd)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_close");
-        return -1;
+	file_t *fp=NULL;
+	fp = fget(fd);
+	if(fp == NULL)
+	{
+		fput(fp);
+		return -EBADF;
+	}
+	 if(NULL == curproc->p_files[fd])
+	 {
+	   return -EBADF;
+	 }
+
+	 curproc->p_files[fd] = NULL;
+	 fput(fp);
+	 return 0;
 }
 
 /* To dup a file:
@@ -162,7 +183,7 @@ do_dup(int fd)
 	  {
 		/* not a valid file */
 
-		return EBADF;
+		return -EBADF;
 	  }
 	  if(fp->f_vnode && S_ISDIR(fp->f_vnode->vn_mode))
 	  {
@@ -172,7 +193,7 @@ do_dup(int fd)
 	  new_fd = get_empty_fd(curproc);
 	  if(-EMFILE == new_fd)
 	  {
-		return EMFILE;
+		return -EMFILE;
 	  }
 	  curproc->p_files[new_fd] = curproc->p_files[fd];
 	  return new_fd;
@@ -196,12 +217,13 @@ do_dup2(int ofd, int nfd)
 
 	  if(nfd == ofd)
 	  {
+		fput(fp);
 		return nfd;
 	  }
 	  if(NULL == fp)
 	  {
 		/* not a valid file */
-		return EBADF;
+		return -EBADF;
 	  }
 	  if(fp->f_vnode && S_ISDIR(fp->f_vnode->vn_mode))
 	  {
@@ -210,7 +232,12 @@ do_dup2(int ofd, int nfd)
 	  }
 	  if(NULL != curproc->p_files[nfd])
 	  {
-		do_close(nfd);
+		err = do_close(nfd);
+		if(0 > err)
+		{
+			fput(fp);
+			return err;
+		}
 	  }
 	  if(-EMFILE == nfd)
 	  {
@@ -251,7 +278,7 @@ int
 do_mknod(const char *path, int mode, unsigned devid)
 {
 
-	if(mode != S_IFCHR || mode != S_IFCHR || strlen(path) < 1)
+	if(mode != S_IFCHR ||  strlen(path) < 1)
 	{
 		return -EINVAL;
 	}
@@ -259,9 +286,10 @@ do_mknod(const char *path, int mode, unsigned devid)
 	{
 		return -ENAMETOOLONG;
 	}
+
 	const char *name;
-	size_t namelength;
-	vnode_t *res_vnode;
+	size_t namelength=0;
+	vnode_t *res_vnode=NULL;
 	int err = dir_namev(path,&namelength,&name,NULL,&res_vnode);
 	if ( err < 0 )
 	{
@@ -277,13 +305,14 @@ do_mknod(const char *path, int mode, unsigned devid)
 	}
 	else if(err== -ENOENT)
 	{
+		KASSERT(NULL != res_vnode->vn_ops->mknod);
 		err = res_vnode->vn_ops->mknod(res_vnode,name,namelength,mode,devid);
 		return err;
 	}
 	else
 		return err;
 
-return -1;
+
 }
 
 /* Use dir_namev() to find the vnode of the dir we want to make the new
@@ -304,28 +333,33 @@ int
 do_mkdir(const char *path)
 {
     /*NOT_YET_IMPLEMENTED("VFS: do_mkdir");*/
-	int ret;
-	size_t namelen;
-	const char *name;
-	vnode_t *res_vnode;
-
+	int ret = 0;
+	size_t namelen=0;
+	const char *name=NULL;
+	vnode_t *res_vnode=NULL;
+	if(strlen(path) > MAXPATHLEN)
+	{
+		return -ENAMETOOLONG;
+	}
 	ret = dir_namev(path, &namelen, &name, NULL, &res_vnode );
 	if(ret < 0) {
 		return ret;
 	} else if(namelen > NAME_LEN) {
+		vput(res_vnode);
 		return -ENAMETOOLONG;
 	} else if(res_vnode == NULL) {
 		return -ENOTDIR;
 	}
 
-	vnode_t *result;
+	vnode_t *result=NULL;
 	ret = lookup(res_vnode, name, namelen, &result);
 	if( ret == 0 ) {
+		vput(res_vnode);
 		vput(result);
 		return -EEXIST;
-	} else if(result == NULL) {
+	}/* else if(result == NULL) {
 		return -ENOENT;
-	}
+	}*/
 
 	KASSERT(NULL != (res_vnode)->vn_ops->mkdir);
 	ret = (res_vnode)->vn_ops->mkdir(res_vnode,name,namelen);
@@ -356,8 +390,8 @@ int
 do_rmdir(const char *path)
 {
     /*NOT_YET_IMPLEMENTED("VFS: do_rmdir");*/
-	int ret;
-	size_t namelen;
+	int ret=0;
+	size_t namelen=0;
 	const char *name;
 	vnode_t *res_vnode;
 
@@ -365,23 +399,30 @@ do_rmdir(const char *path)
 	if (ret < 0) {
 		return ret;
 	} else if (strcmp(name, ".")) {
+		vput(res_vnode);
 		return -EINVAL;
 	} else if( strcmp(name,"..") ) {
+		vput(res_vnode);
 		return -ENOTEMPTY;
 	} else if (res_vnode == NULL) {
 		return -ENOTDIR;
 	} else if (namelen > NAME_LEN) {
+		vput(res_vnode);
 		return -ENAMETOOLONG;
 	}
 
 	vnode_t *result;
-	if (lookup(res_vnode, name, namelen, &result) == 0) {
-		return -EEXIST;
-	} else if (result == NULL) {
-		return -ENOENT;
-	}
 
-	return (res_vnode)->vn_ops->rmdir(res_vnode,name,namelen);
+	ret =lookup(res_vnode, name, namelen, &result) ;
+	if (ret!= 0)
+	{
+		vput(res_vnode);
+		return ret;
+	}
+	/* do we need to decrement result? */
+	ret=(res_vnode)->vn_ops->rmdir(res_vnode,name,namelen);
+	vput(res_vnode);
+	return ret;
 }
 
 /*
@@ -424,6 +465,7 @@ do_unlink(const char *path)
 
 	if (S_ISDIR(res_childvnode->vn_mode)) {
 
+		vput(res_parentvnode);
 		vput(res_childvnode);
 		return -EISDIR;
 	}
@@ -431,6 +473,7 @@ do_unlink(const char *path)
 	KASSERT(NULL != res_parentvnode->vn_ops->unlink);
 
 	returnval = res_parentvnode->vn_ops->unlink(res_parentvnode, name, len);
+	vput(res_childvnode);
 	vput(res_parentvnode);
 	return returnval;
 }
@@ -486,17 +529,22 @@ do_link(const char *from, const char *to)
 		vput(res_childvnode);
 		return -EISDIR;
 	}
-	switch (returnval) {
-	case 0:
+
+	if(0==returnval)
+	{
 		vput(res_childvnode);
 		vput(res_parentvnode);
 		return -EEXIST;
-	case -ENOENT:
+	}
+	else if(-ENOENT==returnval)
+	{
 		returnval = res_childvnode->vn_ops->link(res_parentvnode,
-				res_childvnode, name, len);
+		res_childvnode, name, len);
 		vput(res_parentvnode);
 		return returnval;
-	default:
+	}
+	else
+	{
 		vput(res_parentvnode);
 		return returnval;
 	}
@@ -563,7 +611,7 @@ do_chdir(const char *path)
 
 
 		curproc->p_cwd = res_vnode;
-
+		/*vref(res_vnode);*/
 		return 0;
 
 }
@@ -649,6 +697,7 @@ do_lseek(int fd, int offset, int whence)
 		{
 			return -EBADF;
 		}
+		fput(filepointer);
 		return filepointer->f_pos;
 }
 

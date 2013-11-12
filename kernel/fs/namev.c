@@ -29,8 +29,11 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 	KASSERT(NULL != dir);
 	KASSERT(NULL != name);
 	KASSERT(NULL != result);
-	int ret;
-
+	int ret=0;
+	if(!S_ISDIR(dir->vn_mode))
+	{
+		return -ENOTDIR;
+	}
 	/*special case for "." and ".."*/
 	if(!strncmp(name,".",len)) {
 		(*result) = dir;
@@ -105,15 +108,19 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 		dir = base;
 	}
 
-	if(dir != NULL) {
+	/*if(dir != NULL) {
 		vref(dir);
-	}
+	}*/
 
 	while (breakPtr != endPtr) {
 		breakPtr = strchr(startPtr, '/');
 		if(breakPtr != NULL) {
 			if(dir == NULL) {
+				vput(dir);
 				return -ENOENT;
+			} else if ( !S_ISDIR(dir->vn_mode) ) {
+                vput(dir);
+                return -ENOTDIR;
 			}
 			int ret = lookup(dir, startPtr, breakPtr-startPtr, &result);
 			vput(dir);
@@ -156,9 +163,10 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 		vput(*res_vnode);
 		errno = lookup(*res_vnode, name, len, res_vnode);
 		if ( errno == -ENOENT && (flag & O_CREAT) == O_CREAT) {
+			KASSERT(NULL != (*res_vnode)->vn_ops->create);
 			errno = (*res_vnode)->vn_ops->create(*res_vnode, name, len,
 					res_vnode);
-			KASSERT(NULL != (*res_vnode)->vn_ops->create);
+
 
 		}
 	}

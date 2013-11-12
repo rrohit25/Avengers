@@ -81,6 +81,7 @@ do_open(const char *filename, int oflags)
 	case O_RDONLY:
 	case O_WRONLY:
 	case O_RDWR:
+		flag= oflags & 3;
 		break;
 	default:
 		return -EINVAL;
@@ -121,13 +122,53 @@ do_open(const char *filename, int oflags)
 
 		return -EISDIR;
 	}
+	if ((returnerr == 0) &&
+	    (flag & O_APPEND) != O_APPEND && 
+            (oflags & 3) == O_WRONLY)
+	{
+	                vput(res_vnode);
+	                returnerr = do_unlink(filename);
+	                if ( returnerr < 0 )
+	                {
+	                        fput(curproc->p_files[next_avail_fd]);
+	                        return returnerr;
+	                }
+	                returnerr = open_namev(filename,O_CREAT,&res_vnode,NULL);
+	                if ( returnerr < 0 )
+	                {
+	                        fput(curproc->p_files[next_avail_fd]);
+	                        return returnerr;
+	                }
+	}
+
 
 	curproc->p_files[next_avail_fd] = fp;
 
-	if (oflags == O_RDONLY) {
-		fp->f_mode = FMODE_READ;
-	} else if (oflags == O_WRONLY) {
-		fp->f_mode = FMODE_WRITE;
+	if ( (oflags & 0x700) ==O_APPEND)
+	{
+
+					curproc->p_files[next_avail_fd]->f_mode = FMODE_APPEND;
+	}
+
+
+	else{
+					curproc->p_files[next_avail_fd]->f_mode = 0;
+					curproc->p_files[next_avail_fd]->f_pos = 0;
+
+	}
+
+	if ( (oflags & 3) == O_RDONLY )
+	{
+
+					curproc->p_files[next_avail_fd]->f_mode |= FMODE_READ;
+	}
+	else if ( (oflags & 3) == O_WRONLY )
+	{
+	curproc->p_files[next_avail_fd]->f_mode |= FMODE_WRITE;
+	}
+	else
+	{
+					curproc->p_files[next_avail_fd]->f_mode |= FMODE_WRITE | FMODE_READ;
 	}
 	return next_avail_fd;
 }
