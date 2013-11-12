@@ -209,6 +209,8 @@ idleproc_run(int arg1, void *arg2)
 		panic("MKNOD failed for /dev/tty0\n");
 	} else if(do_mknod("/dev/tty1", S_IFCHR, MKDEVID(2, 1)) != 0) {
 		panic("MKNOD failed for /dev/tty1\n");
+	} else if(do_mknod("/dev/tty2", S_IFCHR, MKDEVID(2, 3)) != 0) {
+		panic("MKNOD failed for /dev/tty1\n");
 	}
 #endif
 

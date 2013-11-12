@@ -32,10 +32,10 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 	int ret;
 
 	/*special case for "." and ".."*/
-	if(!strcmp(name,".")) {
+	if(!strncmp(name,".",len)) {
 		(*result) = dir;
 		return 0;
-	} else if(!strcmp(name,"..")) {
+	} else if(!strncmp(name,"..",len)) {
 		/*set result with its parent*/
 		return 0;
 	}
@@ -98,11 +98,15 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 	if (pathname[0] == '/') {
 		dir = vfs_root_vn;
 		startPtr++;
-		breakPtr++;
+		/*breakPtr++;*/
 	} else if (base == NULL) {
 		dir = curproc->p_cwd;
 	} else {
 		dir = base;
+	}
+
+	if(dir != NULL) {
+		vref(dir);
 	}
 
 	while (breakPtr != endPtr) {

@@ -73,6 +73,60 @@ get_empty_fd(proc_t *p)
 int
 do_open(const char *filename, int oflags)
 {
-        NOT_YET_IMPLEMENTED("VFS: do_open");
-        return -1;
+	int next_avail_fd = 0;
+	file_t *fp = NULL;
+	int flag = 0;
+	vnode_t *res_vnode = NULL;
+	switch (oflags & 3) {
+	case O_RDONLY:
+	case O_WRONLY:
+	case O_RDWR:
+		break;
+	default:
+		return -EINVAL;
+	}
+	switch (oflags & 0x700) {
+	case O_CREAT:
+	case O_TRUNC:
+	case O_APPEND:
+		break;
+	default:
+		return -EINVAL;
+
+	}
+	if (MAXPATHLEN < strlen(filename)) {
+		return -ENAMETOOLONG;
+	}
+	next_avail_fd = get_empty_fd(curproc);
+	if (-EMFILE == next_avail_fd) {
+		return -EMFILE;
+	}
+
+	/* to get a fresh file */
+	fp = fget(-1);
+	if (NULL == fp) {
+		/* not a valid file */
+		return EBADF;
+	}
+	int returnerr = open_namev(filename, flag, &res_vnode, NULL);
+	if (0 > returnerr) {
+		fput(curproc->p_files[next_avail_fd]);
+		return returnerr;
+	}
+
+	if (S_ISDIR(res_vnode->vn_mode)) {
+		vput(res_vnode);
+		fput(curproc->p_files[next_avail_fd]);
+
+		return -EISDIR;
+	}
+
+	curproc->p_files[next_avail_fd] = fp;
+
+	if (oflags == O_RDONLY) {
+		fp->f_mode = FMODE_READ;
+	} else if (oflags == O_WRONLY) {
+		fp->f_mode = FMODE_WRITE;
+	}
+	return next_avail_fd;
 }
