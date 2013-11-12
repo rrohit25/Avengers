@@ -89,6 +89,7 @@ do_open(const char *filename, int oflags)
 	case O_CREAT:
 	case O_TRUNC:
 	case O_APPEND:
+		flag = oflags & 0x700;
 		break;
 	/* default:
 		return -EINVAL; */
