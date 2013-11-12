@@ -90,8 +90,8 @@ do_open(const char *filename, int oflags)
 	case O_TRUNC:
 	case O_APPEND:
 		break;
-	default:
-		return -EINVAL;
+	/* default:
+		return -EINVAL; */
 
 	}
 	if (MAXPATHLEN < strlen(filename)) {
@@ -108,13 +108,13 @@ do_open(const char *filename, int oflags)
 		/* not a valid file */
 		return EBADF;
 	}
-	int returnerr = open_namev(filename, flag, &res_vnode, NULL);
+	int returnerr = open_namev(filename, flag, &fp->f_vnode, NULL);
 	if (0 > returnerr) {
 		fput(curproc->p_files[next_avail_fd]);
 		return returnerr;
 	}
 
-	if (S_ISDIR(res_vnode->vn_mode)) {
+	if (S_ISDIR(fp->f_vnode->vn_mode)) {
 		vput(res_vnode);
 		fput(curproc->p_files[next_avail_fd]);
 
