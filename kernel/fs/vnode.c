@@ -436,10 +436,13 @@ special_file_read(vnode_t *file, off_t offset, void *buf, size_t count)
 {
 	int bytedevread = 0;
 	KASSERT(file);
+	dbg(DBG_PRINT, "(GRADING2A 1.a)Special file present\n ");
 	KASSERT((S_ISCHR(file->vn_mode) || S_ISBLK(file->vn_mode)));
+	dbg(DBG_PRINT, "(GRADING2A 1.a)Special file is either character device file or block device file\n ");
 	if (S_ISCHR(file->vn_mode))
 	{
 		KASSERT(file->vn_cdev && file->vn_cdev->cd_ops && file->vn_cdev->cd_ops->read);
+		dbg(DBG_PRINT, "(GRADING2A 2.a)Read operation on vnode is present\n ");
 		bytedevread=file->vn_cdev->cd_ops->read(file->vn_cdev,offset,buf,count);
 	}
 	if(S_ISBLK(file->vn_mode))
@@ -460,11 +463,17 @@ static int
 special_file_write(vnode_t *file, off_t offset, const void *buf, size_t count)
 {
 	int bytedevread = 0;
+
+
+
 	KASSERT(file);
+	dbg(DBG_PRINT, "(GRADING2A 1.b)Special file present\n ");
 	KASSERT((S_ISCHR(file->vn_mode) || S_ISBLK(file->vn_mode)));
+	dbg(DBG_PRINT, "(GRADING2A 1.b)Special file is either character device file or block device file\n ");
 	if(S_ISCHR(file->vn_mode))
 	{
 		KASSERT(file->vn_cdev && file->vn_cdev->cd_ops && file->vn_cdev->cd_ops->write);
+		dbg(DBG_PRINT, "(GRADING2A 1.b)Read operation on vnode is present\n ");
 		bytedevread=file->vn_cdev->cd_ops->write(file->vn_cdev,offset,buf,count);
 	}
 	if(S_ISBLK(file->vn_mode))
