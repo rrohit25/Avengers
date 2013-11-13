@@ -116,7 +116,15 @@ do_write(int fd, const void *buf, size_t nbytes)
 		fp->f_pos = err;
 	  }
 
-	  bytes_wrote = fp->f_vnode->vn_ops->write(fp->f_vnode,0,buf,nbytes);
+	  if(fp->f_vnode->vn_ops->write)
+	  {
+		  KASSERT((S_ISCHR(fp->f_vnode->vn_mode)) ||
+				  (S_ISBLK(fp->f_vnode->vn_mode)) ||
+				  ((S_ISREG(fp->f_vnode->vn_mode)) &&
+				  (fp->f_pos <= fp->f_vnode->vn_len)));
+		  dbg(DBG_PRINT, "(GRADING2A 3.a)It is either a character or block device file or a regular file whose file position is less than the length of the file\n ");
+		  bytes_wrote = fp->f_vnode->vn_ops->write(fp->f_vnode,0,buf,nbytes);
+	  }
 	  fp->f_pos = fp->f_pos + bytes_wrote;
 	  if(0 > bytes_wrote )
 	  {
@@ -315,6 +323,7 @@ do_mknod(const char *path, int mode, unsigned devid)
 	else if(err== -ENOENT)
 	{
 		KASSERT(NULL != res_vnode->vn_ops->mknod);
+		dbg(DBG_PRINT, "(GRADING2A 3.b)mknod operation on vnode is present\n ");
 		err = res_vnode->vn_ops->mknod(res_vnode,name,namelength,mode,devid);
 		return err;
 	}
@@ -370,6 +379,7 @@ do_mkdir(const char *path)
 	else if(-ENOENT== ret)
 	{
 		KASSERT(NULL != (res_vnode)->vn_ops->mkdir);
+		dbg(DBG_PRINT, "(GRADING2A 3.c)mkdir operation on vnode is present\n ");
 		ret = (res_vnode)->vn_ops->mkdir(res_vnode,name,namelen);
 		vput(res_vnode);
 		return ret;
@@ -429,6 +439,9 @@ do_rmdir(const char *path)
 		vput(res_vnode);
 		return ret;
 	}
+	KASSERT(NULL != res_vnode->vn_ops->rmdir);
+	dbg(DBG_PRINT, "(GRADING2A 3.d)rmdir operation on vnode is present\n ");
+
 	ret=(res_vnode)->vn_ops->rmdir(res_vnode,name,namelen);
 	vput(res_vnode);
 	return ret;
@@ -480,6 +493,7 @@ do_unlink(const char *path)
 	}
 
 	KASSERT(NULL != res_parentvnode->vn_ops->unlink);
+	dbg(DBG_PRINT, "(GRADING2A 3.e)unlink operation on vnode is present\n ");
 
 	returnval = res_parentvnode->vn_ops->unlink(res_parentvnode, name, len);
 	vput(res_childvnode);
@@ -763,6 +777,7 @@ int do_stat(const char *path, struct stat *buf)
 	else if(returnval == 0)
 	{
 		KASSERT(NULL != res_vnode->vn_ops->stat);
+		dbg(DBG_PRINT, "(GRADING2A 3.f)stat operation on vnode is present\n ");
 		returnval = res_vnode->vn_ops->stat(res_vnode, buf);
 		vput(res_vnode);
 		return returnval;

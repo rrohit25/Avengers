@@ -27,8 +27,11 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 {
     /*NOT_YET_IMPLEMENTED("VFS: lookup");l*/
 	KASSERT(NULL != dir);
+	dbg(DBG_PRINT, "(GRADING2A 2.a)Input parameter vnode is not null\n ");
 	KASSERT(NULL != name);
+	dbg(DBG_PRINT, "(GRADING2A 2.a)Input parameter name not null\n ");
 	KASSERT(NULL != result);
+	dbg(DBG_PRINT, "(GRADING2A 2.a)Result vnode pointer not null\n ");
 	int ret=0;
 	if(strlen(name))
 	if(!S_ISDIR(dir->vn_mode))
@@ -87,9 +90,14 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 {
 	/*NOT_YET_IMPLEMENTED("VFS: dir_namev");*/
 	KASSERT(NULL != pathname);
+	dbg(DBG_PRINT, "(GRADING2A 2.b)Input parameter pathname not null\n ");
 	KASSERT(NULL != namelen);
+	dbg(DBG_PRINT, "(GRADING2A 2.b)namelen pointer not null\n ");
 	KASSERT(NULL != name);
+	dbg(DBG_PRINT, "(GRADING2A 2.b)name pointer not null\n ");
 	KASSERT(NULL != res_vnode);
+	dbg(DBG_PRINT, "(GRADING2A 2.b)resultant pointer not null\n ");
+
 
 	int ret = 0;
 	vnode_t *result;
@@ -131,6 +139,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
                 vput(dir);
                 return -ENOTDIR;
 			}
+			/*KASSERT(NULL != dir);*/
 			int ret = lookup(dir, startPtr, breakPtr-startPtr, &result);
 
 			vput(dir);
@@ -138,7 +147,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 
 				return ret;
 			}
-			if ( !S_ISDIR(result->vn_mode) )
+			if (!S_ISDIR(result->vn_mode) )
 			{
 				return -ENOTDIR;
 			}
@@ -203,9 +212,9 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 	        errno = lookup(*res_vnode,name,len,res_vnode);
 	        if ( errno == -ENOENT && ((flag & O_CREAT) == O_CREAT))
 	        {
-	                dbg(DBG_ERROR | DBG_VFS,"Kernel2:SysMsg: open_namev, lookup failed on name = %s, created\n",name);
-	                KASSERT(NULL != (*res_vnode)->vn_ops->create);
-	                errno = (*res_vnode)->vn_ops->create(*res_vnode,name,len,res_vnode);
+	        	KASSERT(NULL != (*res_vnode)->vn_ops->create);
+				dbg(DBG_PRINT, "(GRADING2A 2.c)create operation on vnode is present\n ");
+				errno = (*res_vnode)->vn_ops->create(*res_vnode,name,len,res_vnode);
 	        }
 
 	        return errno;
