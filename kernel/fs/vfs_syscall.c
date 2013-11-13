@@ -144,7 +144,7 @@ do_close(int fd)
 	fp = fget(fd);
 	if(fp == NULL)
 	{
-		fput(fp);
+		/*fput(fp);*/
 		return -EBADF;
 	}
 	 if(NULL == curproc->p_files[fd])
@@ -357,13 +357,14 @@ do_mkdir(const char *path)
 		vput(res_vnode);
 		vput(result);
 		return -EEXIST;
-	}/* else if(result == NULL) {
-		return -ENOENT;
-	}*/
-
-	KASSERT(NULL != (res_vnode)->vn_ops->mkdir);
-	ret = (res_vnode)->vn_ops->mkdir(res_vnode,name,namelen);
-	vput(res_vnode);
+	}
+	else if(-ENOENT== ret)
+	{
+		KASSERT(NULL != (res_vnode)->vn_ops->mkdir);
+		ret = (res_vnode)->vn_ops->mkdir(res_vnode,name,namelen);
+		vput(res_vnode);
+		return ret;
+	}
 	return ret;
 
 }
@@ -392,8 +393,8 @@ do_rmdir(const char *path)
     /*NOT_YET_IMPLEMENTED("VFS: do_rmdir");*/
 	int ret=0;
 	size_t namelen=0;
-	const char *name;
-	vnode_t *res_vnode;
+	const char *name=NULL;
+	vnode_t *res_vnode=NULL;
 
 	ret = dir_namev(path, &namelen, &name, NULL, &res_vnode);
 	if (ret < 0) {
@@ -674,7 +675,7 @@ do_lseek(int fd, int offset, int whence)
 		file_t *filepointer=NULL;
 		filepointer=fget(fd);
 
-		if(whence!=SEEK_SET || whence !=SEEK_CUR || whence!=SEEK_END)
+		if(whence!=SEEK_SET && whence !=SEEK_CUR && whence!=SEEK_END)
 		{
 			return -EINVAL;
 		}
@@ -686,19 +687,26 @@ do_lseek(int fd, int offset, int whence)
 	    {
 	       filepointer->f_pos = filepointer->f_vnode->vn_len + offset;
 	    }
-		else if(whence==SEEK_CUR)
-	    filepointer->f_pos += offset;
-
+		else
+			filepointer->f_pos += offset;
+		if(0 > filepointer->f_pos)
+		{
+			filepointer->f_pos = 0;
+			fput(filepointer);
+			return -EINVAL;
+		}
 		if (NULL != filepointer)
 		  {
 		    fput(filepointer);
+		    return filepointer->f_pos;
 		  }
 		else
 		{
 			return -EBADF;
 		}
-		fput(filepointer);
-		return filepointer->f_pos;
+		/*fput(filepointer);*/
+
+
 }
 
 /*
@@ -730,12 +738,16 @@ int do_stat(const char *path, struct stat *buf)
 	vput(res_vnode);
 
 	returnval = lookup(res_vnode, name, namelength, &res_vnode);
-	if (returnval < 0) {
+	if (returnval == -ENOENT) {
 		return returnval;
 	}
-	KASSERT(NULL != res_vnode->vn_ops->stat);
-	returnval = res_vnode->vn_ops->stat(res_vnode, buf);
-	vput(res_vnode);
+	else if(returnval == 0)
+	{
+		KASSERT(NULL != res_vnode->vn_ops->stat);
+		returnval = res_vnode->vn_ops->stat(res_vnode, buf);
+		vput(res_vnode);
+		return returnval;
+	}
 	return returnval;
 }
 

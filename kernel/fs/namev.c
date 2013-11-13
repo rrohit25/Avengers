@@ -30,29 +30,36 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 	KASSERT(NULL != name);
 	KASSERT(NULL != result);
 	int ret=0;
+	if(strlen(name))
 	if(!S_ISDIR(dir->vn_mode))
 	{
 		return -ENOTDIR;
 	}
 	/*special case for "." and ".."*/
-	if(!strncmp(name,".",len)) {
+	/*if(!strncmp(name,".",len)) {
 		(*result) = dir;
 		return 0;
 	} else if(!strncmp(name,"..",len)) {
-		/*set result with its parent*/
+		set result with its parent
 		return 0;
-	}
+	}*/
 
 	if(dir->vn_ops->lookup == NULL) {
 		return -ENOTDIR;
 	}
+    vfs_is_in_use(vfs_root_vn->vn_fs);
 	ret = dir->vn_ops->lookup(dir,name,len,result);
+
 
 	if(ret < 0){
 		return ret;
 	}
-	vget((*result)->vn_fs,(*result)->vn_vno);
-	return 0;
+	if(len == 0) {
+	 *result = vget(dir->vn_fs,dir->vn_vno);
+	}
+	vfs_is_in_use(vfs_root_vn->vn_fs);
+	/*vref(result);*/
+	return ret;
 }
 
 
@@ -99,7 +106,9 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 	} */
 
 	if (pathname[0] == '/') {
+		curproc->p_cwd = vfs_root_vn;
 		dir = vfs_root_vn;
+
 		startPtr++;
 		/*breakPtr++;*/
 	} else if (base == NULL) {
@@ -108,9 +117,9 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 		dir = base;
 	}
 
-	/*if(dir != NULL) {
-		vref(dir);
-	}*/
+	if(dir != NULL) {
+		vget(dir->vn_fs,dir->vn_vno);
+	}
 
 	while (breakPtr != endPtr) {
 		breakPtr = strchr(startPtr, '/');
@@ -123,9 +132,15 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
                 return -ENOTDIR;
 			}
 			int ret = lookup(dir, startPtr, breakPtr-startPtr, &result);
+
 			vput(dir);
 			if(ret < 0) {
+
 				return ret;
+			}
+			if ( !S_ISDIR(result->vn_mode) )
+			{
+				return -ENOTDIR;
 			}
 			dir = result;
 			breakPtr++;
@@ -152,10 +167,8 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 int
 open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 {
-	KASSERT(NULL != pathname);
-	KASSERT(NULL != res_vnode);
 
-	const char *name;
+	/*const char *name;
 	size_t len;
 
 	int errno= dir_namev(pathname,&len,&name,base,res_vnode);
@@ -170,7 +183,29 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 
 		}
 	}
-	return errno;
+	return errno;*/
+	const char *name;
+	        size_t len;
+	        int errno;
+
+	        /* call dir_name, pass error back, vput dir */
+	        errno = dir_namev(pathname,&len,&name,base,res_vnode);
+	        if ( errno < 0 )
+	        {
+	                return errno;
+	        }
+	        vput(*res_vnode);
+
+	        /* Lookup name and create if fails */
+	        errno = lookup(*res_vnode,name,len,res_vnode);
+	        if ( errno == -ENOENT && ((flag & O_CREAT) == O_CREAT))
+	        {
+	                dbg(DBG_ERROR | DBG_VFS,"Kernel2:SysMsg: open_namev, lookup failed on name = %s, created\n",name);
+	                KASSERT(NULL != (*res_vnode)->vn_ops->create);
+	                errno = (*res_vnode)->vn_ops->create(*res_vnode,name,len,res_vnode);
+	        }
+
+	        return errno;
 }
 
 #ifdef __GETCWD__

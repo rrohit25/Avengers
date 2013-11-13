@@ -81,7 +81,7 @@ do_open(const char *filename, int oflags)
 	case O_RDONLY:
 	case O_WRONLY:
 	case O_RDWR:
-		flag= oflags & 3;
+		/*flag= oflags & 3;*/
 		break;
 	default:
 		return -EINVAL;
@@ -90,7 +90,7 @@ do_open(const char *filename, int oflags)
 	case O_CREAT:
 	case O_TRUNC:
 	case O_APPEND:
-		flag = oflags & 0x700;
+		flag = (oflags & 0x700);
 		break;
 	/* default:
 		return -EINVAL; */
@@ -108,11 +108,11 @@ do_open(const char *filename, int oflags)
 	fp = fget(-1);
 	if (NULL == fp) {
 		/* not a valid file */
-		return EBADF;
+		return -EBADF;
 	}
 	int returnerr = open_namev(filename, flag, &fp->f_vnode, NULL);
 	if (0 > returnerr) {
-		fput(curproc->p_files[next_avail_fd]);
+		/*fput(curproc->p_files[next_avail_fd]);*/
 		return returnerr;
 	}
 

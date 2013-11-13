@@ -190,8 +190,11 @@ idleproc_run(int arg1, void *arg2)
 
 	proc_t *init_proc = proc_lookup(PID_INIT);
 	proc_t *idle_proc = proc_lookup(PID_IDLE);
-	init_proc->p_cwd = vfs_root_vn;
-	idle_proc->p_cwd = vfs_root_vn;
+	init_proc->p_cwd = vfs_root_vn; 
+        curproc->p_cwd = vfs_root_vn;
+	vref(vfs_root_vn);
+	/*idle_proc->p_cwd = vfs_root_vn;
+	vget(idle_proc->p_cwd->vn_fs, vfs_root_vn);*/
 
 	/* Here you need to make the null, zero, and tty devices using mknod */
 	/* You can't do this until you have VFS, check the include/drivers/dev.h
