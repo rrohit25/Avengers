@@ -170,7 +170,8 @@ do_open(const char *filename, int oflags)
 	}
 	else
 	{
-					curproc->p_files[next_avail_fd]->f_mode |= FMODE_WRITE | FMODE_READ;
+					curproc->p_files[next_avail_fd]->f_mode |= FMODE_WRITE;
+					curproc->p_files[next_avail_fd]->f_mode |= FMODE_READ;
 	}
 	return next_avail_fd;
 }

@@ -106,7 +106,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 	} */
 
 	if (pathname[0] == '/') {
-		curproc->p_cwd = vfs_root_vn;
+		/*curproc->p_cwd = vfs_root_vn;*/
 		dir = vfs_root_vn;
 
 		startPtr++;
