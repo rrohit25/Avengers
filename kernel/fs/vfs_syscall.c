@@ -141,6 +141,9 @@ int
 do_close(int fd)
 {
 	file_t *fp=NULL;
+	if(fd < 0) {
+		return -EBADF;
+	}
 	fp = fget(fd);
 	if(fp == NULL)
 	{
@@ -176,6 +179,9 @@ do_close(int fd)
 int
 do_dup(int fd)
 {
+	if(fd < 0){
+		return -EBADF;
+	}
 	  file_t *fp = fget(fd);
 	  int new_fd = 0;
 	  int err = 0;
@@ -212,18 +218,21 @@ do_dup(int fd)
 int
 do_dup2(int ofd, int nfd)
 {
+	if(ofd < 0 || nfd < 0 || ofd >= NFILES || nfd >= NFILES){
+                return -EBADF;
+        }
 	  file_t *fp = fget(ofd);
 	  int err = 0;
+	  if(NULL == fp)
+	  {
+		/* not a valid file */
+		return -EBADF;
+	  }
 
 	  if(nfd == ofd)
 	  {
 		fput(fp);
 		return nfd;
-	  }
-	  if(NULL == fp)
-	  {
-		/* not a valid file */
-		return -EBADF;
 	  }
 	  if(fp->f_vnode && S_ISDIR(fp->f_vnode->vn_mode))
 	  {
@@ -399,10 +408,10 @@ do_rmdir(const char *path)
 	ret = dir_namev(path, &namelen, &name, NULL, &res_vnode);
 	if (ret < 0) {
 		return ret;
-	} else if (strcmp(name, ".")) {
+	} else if (!strcmp(name, ".")) {
 		vput(res_vnode);
 		return -EINVAL;
-	} else if( strcmp(name,"..") ) {
+	} else if( !strcmp(name,"..") ) {
 		vput(res_vnode);
 		return -ENOTEMPTY;
 	} else if (res_vnode == NULL) {
@@ -420,7 +429,6 @@ do_rmdir(const char *path)
 		vput(res_vnode);
 		return ret;
 	}
-	/* do we need to decrement result? */
 	ret=(res_vnode)->vn_ops->rmdir(res_vnode,name,namelen);
 	vput(res_vnode);
 	return ret;
@@ -639,9 +647,10 @@ do_getdent(int fd, struct dirent *dirp)
 		return -EBADF;
 	file_t *fileDescriptor = fget(fd);
 	if (fileDescriptor != NULL) {
-		fput(fileDescriptor);
-		if (!S_ISDIR(fileDescriptor->f_vnode->vn_mode))
+		if (!S_ISDIR(fileDescriptor->f_vnode->vn_mode)) {
+			fput(fileDescriptor);
 			return -ENOTDIR;
+		}
 		else {
 			int num_bytes = fileDescriptor->f_vnode->vn_ops->readdir(
 					fileDescriptor->f_vnode, fileDescriptor->f_pos, dirp);
@@ -672,8 +681,15 @@ int
 do_lseek(int fd, int offset, int whence)
 {
 	 /*NOT_YET_IMPLEMENTED("VFS: do_lseek");*/
+		if(fd < 0) {
+			return -EBADF;
+		}
 		file_t *filepointer=NULL;
 		filepointer=fget(fd);
+
+		if(filepointer == NULL) {
+			return -EBADF;
+		}
 
 		if(whence!=SEEK_SET && whence !=SEEK_CUR && whence!=SEEK_END)
 		{
@@ -729,6 +745,9 @@ int do_stat(const char *path, struct stat *buf)
 	vnode_t *res_vnode = NULL;
 	if (strlen(path) > MAXPATHLEN) {
 		return -ENAMETOOLONG;
+	}
+	if( strlen(path) == 0) {
+		return -EINVAL;
 	}
 	returnval = dir_namev(path, &namelength, &name, NULL, &res_vnode);
 

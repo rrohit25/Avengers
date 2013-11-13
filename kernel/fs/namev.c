@@ -47,17 +47,17 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 	if(dir->vn_ops->lookup == NULL) {
 		return -ENOTDIR;
 	}
-    vfs_is_in_use(vfs_root_vn->vn_fs);
+    	/*vfs_is_in_use(vfs_root_vn->vn_fs);*/
 	ret = dir->vn_ops->lookup(dir,name,len,result);
 
 
-	if(ret < 0){
+	/*if(ret < 0){
 		return ret;
 	}
 	if(len == 0) {
 	 *result = vget(dir->vn_fs,dir->vn_vno);
-	}
-	vfs_is_in_use(vfs_root_vn->vn_fs);
+	}*/
+	/*vfs_is_in_use(vfs_root_vn->vn_fs);*/
 	/*vref(result);*/
 	return ret;
 }
@@ -195,6 +195,9 @@ open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 	                return errno;
 	        }
 	        vput(*res_vnode);
+		if (len > NAME_LEN) {
+			return - ENAMETOOLONG;
+		}
 
 	        /* Lookup name and create if fails */
 	        errno = lookup(*res_vnode,name,len,res_vnode);

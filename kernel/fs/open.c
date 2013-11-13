@@ -116,9 +116,11 @@ do_open(const char *filename, int oflags)
 		return returnerr;
 	}
 
-	if (S_ISDIR(fp->f_vnode->vn_mode)) {
-		vput(res_vnode);
-		fput(curproc->p_files[next_avail_fd]);
+	if (S_ISDIR(fp->f_vnode->vn_mode) &&
+            (((oflags & 3) == O_WRONLY) || 
+             ((oflags & 3) == O_RDWR))) {
+		vput(fp->f_vnode);
+		/*fput(curproc->p_files[next_avail_fd]);*/
 
 		return -EISDIR;
 	}
@@ -126,7 +128,7 @@ do_open(const char *filename, int oflags)
 	    (flag & O_APPEND) != O_APPEND && 
             (oflags & 3) == O_WRONLY)
 	{
-	                vput(res_vnode);
+	                vput(fp->f_vnode);
 	                returnerr = do_unlink(filename);
 	                if ( returnerr < 0 )
 	                {
