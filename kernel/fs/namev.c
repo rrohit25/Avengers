@@ -193,48 +193,26 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 int
 open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 {
-
-	/*const char *name;
+	const char *name = NULL;
 	size_t len;
 
 	int errno= dir_namev(pathname,&len,&name,base,res_vnode);
 	if ( errno >= 0) {
 		vput(*res_vnode);
-		errno = lookup(*res_vnode, name, len, res_vnode);
-		if ( errno == -ENOENT && (flag & O_CREAT) == O_CREAT) {
-			KASSERT(NULL != (*res_vnode)->vn_ops->create);
-			errno = (*res_vnode)->vn_ops->create(*res_vnode, name, len,
-					res_vnode);
-
-
-		}
-	}
-	return errno;*/
-	const char *name;
-	        size_t len;
-	        int errno;
-
-	        /* call dir_name, pass error back, vput dir */
-	        errno = dir_namev(pathname,&len,&name,base,res_vnode);
-	        if ( errno < 0 )
-	        {
-	                return errno;
-	        }
-	        vput(*res_vnode);
 		if (len > NAME_LEN) {
 			return - ENAMETOOLONG;
 		}
+		errno = lookup(*res_vnode, name, len, res_vnode);
+		if ( errno == -ENOENT && (flag & O_CREAT) == O_CREAT) {
+			KASSERT(NULL != (*res_vnode)->vn_ops->create);
+			dbg(DBG_PRINT,
+					"(GRADING2A 2.c)create operation on vnode is present\n ");
+			errno = (*res_vnode)->vn_ops->create(*res_vnode, name, len,
+					res_vnode);
 
-	        /* Lookup name and create if fails */
-	        errno = lookup(*res_vnode,name,len,res_vnode);
-	        if ( errno == -ENOENT && ((flag & O_CREAT) == O_CREAT))
-	        {
-	        	KASSERT(NULL != (*res_vnode)->vn_ops->create);
-				dbg(DBG_PRINT, "(GRADING2A 2.c)create operation on vnode is present\n ");
-				errno = (*res_vnode)->vn_ops->create(*res_vnode,name,len,res_vnode);
-	        }
-
-	        return errno;
+		}
+	}
+	return errno;
 }
 
 #ifdef __GETCWD__
