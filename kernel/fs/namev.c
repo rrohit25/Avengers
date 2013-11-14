@@ -105,6 +105,7 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 	char* startPtr = (char*) pathname;
 	char* breakPtr = (char*) pathname;
 	char* endPtr = (char*) pathname + strlen(pathname);
+	char* extraPtr = NULL;
 
 	/*check if length check needed if not you can remove it
 	if(strlen(pathname) == 0) {
@@ -128,41 +129,57 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 	if(dir != NULL) {
 		vget(dir->vn_fs,dir->vn_vno);
 	}
-
 	while (breakPtr != endPtr) {
-		breakPtr = strchr(startPtr, '/');
-		if(breakPtr != NULL) {
-			if(dir == NULL) {
-				vput(dir);
-				return -ENOENT;
-			} else if ( !S_ISDIR(dir->vn_mode) ) {
-                vput(dir);
-                return -ENOTDIR;
-			}
-			/*KASSERT(NULL != dir);*/
-			int ret = lookup(dir, startPtr, breakPtr-startPtr, &result);
+                breakPtr = strchr(startPtr, '/');
+                extraPtr = breakPtr;
+                if( extraPtr != NULL) {
+                        while(*extraPtr == '/') {
+                                extraPtr++;
+                        }
+                }
+                if(breakPtr != NULL && breakPtr+1 != endPtr && extraPtr!=endPtr ) {
+                        if(dir == NULL) {
+                                vput(dir);
+                                return -ENOENT;
+                        } else if ( !S_ISDIR(dir->vn_mode) ) {
+                                vput(dir);
+                                return -ENOTDIR;
+                        }
+			KASSERT(NULL != dir);
+			dbg(DBG_PRINT,"(GRADING2A 2.b)Directory vnode is not NULL\n");
+                        int ret = lookup(dir, startPtr, breakPtr-startPtr, &result);
 
-			vput(dir);
-			if(ret < 0) {
+                        vput(dir);
+                        if(ret < 0) {
 
-				return ret;
-			}
-			if (!S_ISDIR(result->vn_mode) )
-			{
-				return -ENOTDIR;
-			}
-			dir = result;
-			breakPtr++;
+                                return ret;
+                        }
+                        if ( !S_ISDIR(result->vn_mode) )
+                        {
+                                return -ENOTDIR;
+                        }
+                        dir = result;
+                        if( extraPtr == NULL) {
+                                breakPtr++;
+                        } else {
+                                breakPtr = extraPtr;
+                        }
 			startPtr = breakPtr;
-		} else {
-			break;
-		}
-	}
-	*res_vnode = dir;
-	*name = (const char*) startPtr;
-	*namelen = endPtr-startPtr;
-	return 0;
-
+                } else {
+                        if(breakPtr+1 == endPtr) {
+                                endPtr--;
+                        }
+                        break;
+                }
+        }
+        *res_vnode = dir;
+        *name = (const char*) startPtr;
+        if( endPtr == extraPtr ) {
+                *namelen = breakPtr-startPtr;
+        } else {
+                *namelen = endPtr-startPtr;
+        }
+        return 0;
 }
 
 /* This returns in res_vnode the vnode requested by the other parameters.

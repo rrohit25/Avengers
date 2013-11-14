@@ -117,7 +117,7 @@ do_open(const char *filename, int oflags)
 	}
 
 	if (S_ISDIR(fp->f_vnode->vn_mode) &&
-            (((oflags & 3) == O_WRONLY) || 
+            (((oflags & 3) == O_WRONLY) ||
              ((oflags & 3) == O_RDWR))) {
 		vput(fp->f_vnode);
 		/*fput(curproc->p_files[next_avail_fd]);*/
@@ -125,7 +125,7 @@ do_open(const char *filename, int oflags)
 		return -EISDIR;
 	}
 	if ((returnerr == 0) &&
-	    (flag & O_APPEND) != O_APPEND && 
+	    (flag & O_APPEND) != O_APPEND &&
             (oflags & 3) == O_WRONLY)
 	{
 	                vput(fp->f_vnode);
@@ -149,20 +149,17 @@ do_open(const char *filename, int oflags)
 	if ( (oflags & 0x700) ==O_APPEND)
 	{
 
-					curproc->p_files[next_avail_fd]->f_mode = FMODE_APPEND;
+	   curproc->p_files[next_avail_fd]->f_mode = FMODE_APPEND;
+	   /* curproc->p_files[next_avail_fd]->f_pos = fp->f_vnode->vn_len;  */
 	}
-
-
 	else{
-					curproc->p_files[next_avail_fd]->f_mode = 0;
-					curproc->p_files[next_avail_fd]->f_pos = 0;
+	  curproc->p_files[next_avail_fd]->f_mode = 0;
+	  curproc->p_files[next_avail_fd]->f_pos = 0;
 
 	}
-
 	if ( (oflags & 3) == O_RDONLY )
 	{
-
-					curproc->p_files[next_avail_fd]->f_mode |= FMODE_READ;
+   	  curproc->p_files[next_avail_fd]->f_mode |= FMODE_READ;
 	}
 	else if ( (oflags & 3) == O_WRONLY )
 	{
@@ -170,8 +167,8 @@ do_open(const char *filename, int oflags)
 	}
 	else
 	{
-					curproc->p_files[next_avail_fd]->f_mode |= FMODE_WRITE;
-					curproc->p_files[next_avail_fd]->f_mode |= FMODE_READ;
+	  curproc->p_files[next_avail_fd]->f_mode |= FMODE_WRITE;
+	  curproc->p_files[next_avail_fd]->f_mode |= FMODE_READ;
 	}
 	return next_avail_fd;
 }
