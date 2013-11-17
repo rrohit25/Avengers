@@ -146,12 +146,12 @@ bootstrap(int arg1, void *arg2)
         /*NOT_YET_IMPLEMENTED("PROCS: bootstrap");*/
 	curproc = proc_create("IDLE");
 	KASSERT(NULL != curproc); /* make sure that the "idle" process has been created successfully */
-	dbg_print("kmain.c: bootstrap: The idle process has been created successfully\n");
+	dbg(DBG_PRINT,"(GRADING1A 1.a): kmain.c: bootstrap: The idle process has been created successfully\n");
 	KASSERT(PID_IDLE == curproc->p_pid); /* make sure that what has been created is the "idle" process */
-	dbg_print("kmain.c: bootstrap: The pid of the current process is PID_IDLE\n");
+	dbg(DBG_PRINT,"(GRADING1A 1.a): kmain.c: bootstrap: The pid of the current process is PID_IDLE\n");
 	curthr = kthread_create(curproc, idleproc_run, 0, NULL);
 	KASSERT(NULL != curthr); /* make sure that the thread for the "idle" process has been created successfully */
-	dbg_print("kmain.c: bootstrap: The thread for the IDLE process has been created successfully\n");
+	dbg(DBG_PRINT,"(GRADING1A 1.a): kmain.c: bootstrap: The thread for the IDLE process has been created successfully\n");
 	context_make_active(&curthr->kt_ctx);
 
         panic("weenix returned to bootstrap()!!! BAD!!!\n");
@@ -268,12 +268,12 @@ initproc_create(void)
         /*NOT_YET_IMPLEMENTED("PROCS: initproc_create");*/
 	proc_t *init_proc = proc_create("INIT");
 	KASSERT(NULL != init_proc);
-	dbg_print("kmain.c:initproc_create: init_proc has been created successfully\n ");
+	dbg(DBG_PRINT,"(GRADING1A 1.b): kmain.c:initproc_create: init_proc has been created successfully\n ");
 	KASSERT(PID_INIT == init_proc->p_pid);
-	dbg_print("kmain.c:initproc_create: init_proc PID is equal to PID_INIT\n ");
+	dbg(DBG_PRINT,"(GRADING1A 1.b): kmain.c:initproc_create: init_proc PID is equal to PID_INIT\n ");
 	kthread_t *init_thread = kthread_create(init_proc,initproc_run,0,NULL);
 	KASSERT(init_thread != NULL);
-	dbg_print("kmain.c:initproc_create: init_thread has been created successfully and is valid\n ");
+	dbg(DBG_PRINT,"(GRADING1A 1.b): kmain.c:initproc_create: init_thread has been created successfully and is valid\n ");
 	/*sched_make_runnable(init_thread);*/
 	return init_thread;
 }
@@ -299,6 +299,28 @@ int vfs_test(kshell_t* kshell, int argc, char **argv) {
 	return 0;
 }
 
+int extra_vfs_test(kshell_t* kshell, int arg1, char **argv)
+{
+    char *before="file1";
+    char *after="file2";
+    int fd = 0;
+    fd = do_open(before,O_RDWR|O_CREAT);
+    if(fd > 0)
+    {
+    int rename = do_rename(before,after);
+    if(rename == 0)
+    {
+        dbg(DBG_PRINT,"(GRADING2C) Student rename test successful \n");
+    }
+    else
+    { 
+        dbg(DBG_PRINT,"(GRADING2C) Student rename test unsuccessful \n");
+    }
+    do_close(fd);
+    }
+    return 0;
+}
+
 /**
  * The init thread's function changes depending on how far along your Weenix is
  * developed. Before VM/FI, you'll probably just want to have this run whatever
@@ -321,7 +343,8 @@ initproc_run(int arg1, void *arg2)
 	kshell_add_command("deadlock", deadlock_test, "Deadlock test");
 	kshell_add_command("testproc", faber_test, "Faber test");
 #ifdef __VFS__
-	kshell_add_command("testvfs", vfs_test, "VFS test");
+	kshell_add_command("vfstest", vfs_test, "VFS test");
+	kshell_add_command("renametest", extra_vfs_test, "student rename test(vfs)");
 #endif
 	kshell_t *kshell = kshell_create(0);
 	if (NULL == kshell) panic("init: Couldn't create kernel shell\n");

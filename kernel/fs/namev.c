@@ -33,7 +33,7 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 	KASSERT(NULL != result);
 	dbg(DBG_PRINT, "(GRADING2A 2.a)Result vnode pointer not null\n ");
 	int ret=0;
-	if(strlen(name))
+
 	if(!S_ISDIR(dir->vn_mode))
 	{
 		return -ENOTDIR;

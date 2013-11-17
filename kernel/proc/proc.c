@@ -99,9 +99,9 @@ proc_create(char *name)
 	list_link_init(&new_proc->p_list_link);
 
 	KASSERT(PID_IDLE != pid || list_empty(&_proc_list)); /* pid can only be PID_IDLE if this is the first process */
-	dbg_print("proc.c: proc_create: For the first process(idle process) the pid is PID_IDLE\n");
+	dbg(DBG_PRINT,"(GRADING1A 2.a): proc.c: proc_create: For the first process(idle process) the pid is PID_IDLE\n");
 	KASSERT(PID_INIT != pid || PID_IDLE == curproc->p_pid); /* pid can only be PID_INIT when creating from idle process */
-	dbg_print("proc.c: proc_create: pid is PID_INT when init process (child of idle process) is being created\n");
+	dbg(DBG_PRINT,"(GRADING1A 2.a): proc.c: proc_create: pid is PID_INT when init process (child of idle process) is being created\n");
 	list_insert_tail(&_proc_list, &new_proc->p_list_link);
 
 	if(curproc!=NULL)
@@ -143,11 +143,11 @@ proc_cleanup(int status)
 
 	/*NOT_YET_IMPLEMENTED("PROCS: proc_cleanup");*/
 	KASSERT(NULL != proc_initproc); /* should have an "init" process */
-	dbg_print("proc.c: proc_cleanup: (pre-condition) init process is not NULL\n");
+	dbg(DBG_PRINT,"(GRADING1A 2.b): proc.c: proc_cleanup: (pre-condition) init process is not NULL\n");
 	KASSERT(1 <= curproc->p_pid); /* this process should not be idle process */
-	dbg_print("proc.c: proc_cleanup: (pre-condition) current process pid is not idle process\n");
+	dbg(DBG_PRINT,"(GRADING1A 2.b): proc.c: proc_cleanup: (pre-condition) current process pid is not idle process\n");
 	KASSERT(NULL != curproc->p_pproc); /* this process should have parent process */
-	dbg_print("proc.c: proc_cleanup: (pre-condition) the current process has parent process\n");
+	dbg(DBG_PRINT,"(GRADING1A 2.b): proc.c: proc_cleanup: (pre-condition) the current process has parent process\n");
 	proc_t *p = curproc;
 	proc_t *child = NULL;
 	list_t parent_waitlist;
@@ -167,11 +167,30 @@ proc_cleanup(int status)
 		}
 	curproc->p_state = PROC_DEAD;
 	curproc->p_status = 0;
+	int i = 0;
+        
+	for(i=0;i<NFILES;i++)
+	{
+		file_t *f = curproc->p_files[i];
+		if(f)
+		{
+		   fref(f);
+		}
+	}
+	struct vnode *vnode = NULL;
+	if(p->p_pid==PID_INIT || p->p_pid == PID_IDLE){
+	list_iterate_begin(&p->p_cwd->vn_link, vnode, struct vnode, vn_link)
+                                        {
+											while(vnode->vn_refcount > 0) {
+                                                vput(vnode);
+											}
+                                        }list_iterate_end();
+	}
 	/*kthread_destroy(curthr);*/
 	sched_wakeup_on(&curproc->p_pproc->p_wait);
 	sched_switch();
 	KASSERT(NULL != curproc->p_pproc); /* this process should have parent process */
-	dbg_print("proc.c: proc_cleanup: (post-condition) The current process has parent process\n");
+	dbg(DBG_PRINT,"(GRADING1A) 2.b: proc.c: proc_cleanup: (post-condition) The current process has parent process\n");
 }
 
 /*
@@ -282,13 +301,13 @@ do_waitpid(pid_t pid, int options, int *status)
 		while (1) {
 			list_iterate_begin(&curproc->p_children,cur_child,proc_t,p_child_link) {
 				KASSERT(NULL != cur_child);
-				dbg_print("proc.c: do_waitpid: the process is not NULL\n");
+				dbg(DBG_PRINT,"(GRADING1A 2.c): proc.c: do_waitpid: the process is not NULL\n");
 	   			KASSERT(-1 == pid || cur_child->p_pid == pid);
-	   			dbg_print("proc.c: do_waitpid: the pid is either -1 or pid of child process\n");
+	   			dbg(DBG_PRINT,"(GRADING1A 2.c): proc.c: do_waitpid: the pid is either -1 or pid of child process\n");
 	   			if(cur_child->p_state==PROC_DEAD) {
 	   				list_iterate_begin(&cur_child->p_threads,cur_thread,kthread_t,kt_plink) {
 	   					KASSERT(KT_EXITED == cur_thread->kt_state);
-	   					dbg_print("proc.c: do_waitpid: the child process's state is KT_EXITED\n");
+	   					dbg(DBG_PRINT,"(GRADING1A 2.c): proc.c: do_waitpid: the child process's state is KT_EXITED\n");
 	   					kthread_destroy(cur_thread);
 	   				}list_iterate_end();
 
@@ -296,7 +315,7 @@ do_waitpid(pid_t pid, int options, int *status)
 	   				list_remove(&cur_child->p_child_link);
 	   				list_remove(&cur_child->p_list_link);
 	   				KASSERT(NULL != cur_child->p_pagedir);
-	   				dbg_print("proc.c: do_waitpid: current process's pagedir is not NULL\n");
+	   				dbg(DBG_PRINT,"(GRADING1A 2.c): proc.c: do_waitpid: current process's pagedir is not NULL\n");
 	   				pt_destroy_pagedir(cur_child->p_pagedir);
 	   				slab_obj_free(proc_allocator,cur_child);
 	   				return(cur_child->p_pid);

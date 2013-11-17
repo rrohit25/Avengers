@@ -343,6 +343,7 @@ do_mknod(const char *path, int mode, unsigned devid)
                 KASSERT(NULL != res_vnode->vn_ops->mknod);
                 dbg(DBG_PRINT, "(GRADING2A 3.b)mknod operation on vnode is present\n ");
                 err = res_vnode->vn_ops->mknod(res_vnode,name,namelength,mode,devid);
+                vput(res_vnode);
                 return err;
         }
         else
