@@ -357,7 +357,18 @@ pframe_migrate(pframe_t *pf, mmobj_t *dest)
 void
 pframe_pin(pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: pframe_pin");
+	/*NOT_YET_IMPLEMENTED("VM: pframe_pin");*/
+	KASSERT(!pframe_is_free(pf));
+	KASSERT(pf->pf_pincount >= 0);
+
+	if (pf->pf_pincount == 0) {
+		/*remove this pframe's list link from the allocated list and add it to the pinned list */
+		list_remove(&pf->pf_link);
+		nallocated--;
+		list_insert_tail(&pinned_list, &pf->pf_link);
+		npinned++;
+	}
+	pf->pf_pincount++;
 }
 
 /*
@@ -373,7 +384,18 @@ pframe_pin(pframe_t *pf)
 void
 pframe_unpin(pframe_t *pf)
 {
-        NOT_YET_IMPLEMENTED("VM: pframe_unpin");
+	/*NOT_YET_IMPLEMENTED("VM: pframe_unpin");*/
+	KASSERT(!pframe_is_free(pf));
+	KASSERT(pf->pf_pincount > 0);
+
+	pf->pf_pincount--;
+	npinned--;
+	if (pf->pf_pincount == 0) {
+		/*move the pframe's list link from the pinned list to the allocated list*/
+		list_remove(&pf->pf_link);
+		list_insert_tail(&alloc_list, &pf->pf_link);
+		nallocated++;
+	}
 }
 
 /*
