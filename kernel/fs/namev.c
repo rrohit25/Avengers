@@ -38,6 +38,12 @@ lookup(vnode_t *dir, const char *name, size_t len, vnode_t **result)
 	{
 		return -ENOTDIR;
 	}
+	if(strlen(name) == 0)
+	{
+	  *result = dir;
+	  vref(*result);
+	  return 0;
+	}
 	/*special case for "." and ".."*/
 	/*if(!strncmp(name,".",len)) {
 		(*result) = dir;
