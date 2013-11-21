@@ -306,8 +306,8 @@ pframe_get(struct mmobj *o, uint32_t pagenum, pframe_t **result)
 		 *
 		 *check whether the frame is busy
 		 */
-		if (pframe_is_busy(pf)) {
-			sched_sleep_on(result->pf_waitq);
+		if (pframe_is_busy(*result)) {
+			sched_sleep_on(&(*result)->pf_waitq);
 		}
 		return 0;
 	} else {
