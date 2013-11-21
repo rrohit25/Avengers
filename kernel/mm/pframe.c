@@ -297,8 +297,31 @@ pframe_fill(pframe_t *pf)
 int
 pframe_get(struct mmobj *o, uint32_t pagenum, pframe_t **result)
 {
-        NOT_YET_IMPLEMENTED("VM: pframe_get");
-        return 0;
+	/*NOT_YET_IMPLEMENTED("VM: pframe_get");  */
+	*result = pframe_get_resident(o, pagenum);
+	if (*result != NULL) {
+		/* success
+		 *
+		 * page is already present in main memory
+		 *
+		 *check whether the frame is busy
+		 */
+		if (pframe_is_busy(pf)) {
+			sched_sleep_on(result->pf_waitq);
+		}
+		return 0;
+	} else {
+		/* frame not found */
+		*result = pframe_alloc(o, pagenum);
+		if (*result == NULL) {
+			pageoutd_run(0, NULL);
+			*result = pframe_alloc(o, pagenum);
+		}
+		pframe_fill(*result);
+		return 0;
+
+	}
+	return 0;
 }
 
 int
