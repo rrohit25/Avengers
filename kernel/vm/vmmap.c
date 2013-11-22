@@ -58,8 +58,13 @@ vmarea_free(vmarea_t *vma)
 vmmap_t *
 vmmap_create(void)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_create");
-        return NULL;
+	/*NOT_YET_IMPLEMENTED("VM: vmmap_create");*/
+	vmmap_t* new_vmmap = (vmmap_t *) slab_obj_alloc(vmmap_allocator);
+	if (new_vmmap) {
+		list_init(&new_vmmap->vmm_list);
+		new_vmmap->vmm_proc = NULL;
+	}
+	return new_vmmap;
 }
 
 /* Removes all vmareas from the address space and frees the
@@ -67,7 +72,21 @@ vmmap_create(void)
 void
 vmmap_destroy(vmmap_t *map)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_destroy");
+	/*NOT_YET_IMPLEMENTED("VM: vmmap_destroy");*/
+	KASSERT(NULL != map); /*pre-condition*/
+
+	vmarea_t* vma;
+	/* I think we should iterate over the list of vmareas, remove them from the list and free them (do the iteration right)*/
+	list_iterate_begin(&map->vmm_list, vma, vmarea_t, vma_plink) {
+	 	 list_remove(&vma->vma_plink);
+	 	 vmarea_free(vma); /*Not sure if we have to free the vmareas. If not then what do we do with these removed vmareas? What about
+	 	 	 	 	 	 	 list of vmmaps for the process: vma_olink??*/
+	 }list_iterate_end();
+
+	/*free the vmmap struct*/
+	list_remove(&map->vmm_list);
+	map->vmm_proc = NULL;
+	slab_obj_free(vmmap_allocator, map);
 }
 
 /* Add a vmarea to an address space. Assumes (i.e. asserts to some extent)
@@ -77,7 +96,29 @@ vmmap_destroy(vmmap_t *map)
 void
 vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_insert");
+        /*NOT_YET_IMPLEMENTED("VM: vmmap_insert");*/
+	/* 4 pre-conditions*/
+	KASSERT(NULL != map && NULL != newvma);
+	KASSERT(NULL == newvma->vma_vmmap);
+	KASSERT(newvma->vma_start < newvma->vma_end);
+	KASSERT(ADDR_TO_PN(USER_MEM_LOW) <= newvma->vma_start && ADDR_TO_PN(USER_MEM_HIGH) >= newvma->vma_end);
+
+	newvma->vma_vmmap = map;
+
+	vmarea_t* vma;
+	if( list_empty(&map->vmm_list) ) {
+		list_insert_head(&map->vmm_list, &newvma->vma_plink);
+	} else {
+		list_iterate_begin(&map->vmm_list, vma, vmarea_t, vma_olink) {
+
+			if(vma->vma_start < newvma->vma_start && newvma->vma_end < vma->vma_end) {
+				list_insert_before(&vma->vma_plink, &newvma->vma_plink);
+				break;
+			}
+		}list_iterate_end();
+	}
+
+
 }
 
 /* Find a contiguous range of free virtual pages of length npages in
@@ -90,7 +131,10 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 int
 vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_find_range");
+        /*NOT_YET_IMPLEMENTED("VM: vmmap_find_range");*/
+	/*2 pre-conditions*/
+	KASSERT(NULL != map);
+	KASSERT(0 < npages);
         return -1;
 }
 
@@ -100,7 +144,8 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 vmarea_t *
 vmmap_lookup(vmmap_t *map, uint32_t vfn)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_lookup");
+        /*NOT_YET_IMPLEMENTED("VM: vmmap_lookup");*/
+	KASSERT(NULL != map); /*pre-condition*/
         return NULL;
 }
 
@@ -144,7 +189,18 @@ int
 vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
           int prot, int flags, off_t off, int dir, vmarea_t **new)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_map");
+        /*NOT_YET_IMPLEMENTED("VM: vmmap_map");*/
+
+	/* 7 pre-conditions */
+	KASSERT(NULL != map);
+	KASSERT(0 < npages);
+	KASSERT(!(~(PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC) & prot));
+	KASSERT((MAP_SHARED & flags) || (MAP_PRIVATE & flags));
+	KASSERT((0 == lopage) || (ADDR_TO_PN(USER_MEM_LOW) <= lopage));
+	KASSERT((0 == lopage) || (ADDR_TO_PN(USER_MEM_HIGH) >= (lopage + npages)));
+	KASSERT(PAGE_ALIGNED(off));
+
+
         return -1;
 }
 
@@ -191,8 +247,12 @@ vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 int
 vmmap_is_range_empty(vmmap_t *map, uint32_t startvfn, uint32_t npages)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_is_range_empty");
-        return 0;
+	/*NOT_YET_IMPLEMENTED("VM: vmmap_is_range_empty"); */
+	uint32_t endvfn = startvfn + npages;
+	KASSERT((startvfn < endvfn) && (ADDR_TO_PN(USER_MEM_LOW) <= startvfn) && (ADDR_TO_PN(USER_MEM_HIGH) >= endvfn));
+
+
+	return 0;
 }
 
 /* Read into 'buf' from the virtual address space of 'map' starting at
