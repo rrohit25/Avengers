@@ -51,5 +51,48 @@
 void
 handle_pagefault(uintptr_t vaddr, uint32_t cause)
 {
-        NOT_YET_IMPLEMENTED("VM: handle_pagefault");
+        /*NOT_YET_IMPLEMENTED("VM: handle_pagefault");*/
+
+	vmarea_t* vma_fault = vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(vaddr));
+
+	if( vma_fault == NULL ) {
+		proc_kill(curproc, EFAULT);
+		return;
+	}
+	/*check for all these :
+		FAULT_PRESENT  0x01
+		FAULT_WRITE    0x02
+		FAULT_USER     0x04
+		FAULT_RESERVED 0x08
+		FAULT_EXEC     0x10
+	 */
+
+	/*have to write for present, user and reserved*/
+
+	if( (cause & FAULT_WRITE) && !(vma_fault->vma_flags & PROT_WRITE) ) {
+		proc_kill(curproc, EFAULT);
+		return;
+	}
+
+	if(( cause & FAULT_EXEC) && !(vma_fault->vma_flags & PROT_EXEC)) {
+		proc_kill(curproc, EFAULT);
+		return;
+	}
+
+
+	/*Once all the error conditions are handled, get a frame.
+	 * We are supposed to handle copy on write .. Is this done in page fault or pframe_get() ????????*/
+	pframe_t* res_pframe = NULL;
+	int ret = pframe_get(vma_fault->vma_obj, PAGE_OFFSET(vaddr), &res_pframe);
+	if(ret < 0) {
+		return;
+	}
+
+	pframe_clear_busy(res_pframe);
+
+
+	uintptr_t paddr = pt_virt_to_phys((uintptr_t)res_pframe->pf_addr);
+
+	pt_map(curproc->p_pagedir, vaddr, paddr, PD_PRESENT|PD_WRITE|PD_USER, PT_PRESENT|PT_WRITE|PT_USER);
+
 }

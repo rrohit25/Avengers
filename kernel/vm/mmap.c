@@ -34,7 +34,18 @@ int
 do_mmap(void *addr, size_t len, int prot, int flags,
         int fd, off_t off, void **ret)
 {
-        NOT_YET_IMPLEMENTED("VM: do_mmap");
+        /*NOT_YET_IMPLEMENTED("VM: do_mmap");*/
+
+	if(addr == NULL) {
+		/*Kernel chooses the address at which to create the mapping*/
+
+	}
+
+	tlb_flush((uintptr_t)addr);
+
+	vmmap_map(curproc->p_vmmap, curproc->p_files[fd]->f_vnode, 0, 0, prot, flags, off, NULL, (vmarea_t**)ret);
+
+	KASSERT(NULL != curproc->p_pagedir);
         return -1;
 }
 
