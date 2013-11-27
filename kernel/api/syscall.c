@@ -56,8 +56,33 @@ init_func(syscall_init);
 static int
 sys_read(read_args_t *arg)
 {
-        NOT_YET_IMPLEMENTED("VM: sys_read");
-        return -1;
+        /*NOT_YET_IMPLEMENTED("VM: sys_read");*/
+	read_args_t kern_args;
+	int ret;
+
+	ret = copy_from_user(&kern_args, arg, sizeof(read_args_t));
+	if(ret < 0) {
+		curthr->kt_errno = -ret;
+		return -1;
+	}
+
+	void *temp_buf = page_alloc();
+
+	int bytes_read = do_read(kern_args.fd, temp_buf, kern_args.nbytes);
+	if(bytes_read < 0) {
+		curthr->kt_errno = -bytes_read;
+		return -1;
+	}
+
+	ret = copy_to_user(arg->buf, temp_buf, bytes_read);
+	if(ret < 0) {
+		curthr->kt_errno = -ret;
+		return -1;
+	}
+
+	page_free(temp_buf);
+
+	return bytes_read;
 }
 
 /*
@@ -66,8 +91,34 @@ sys_read(read_args_t *arg)
 static int
 sys_write(write_args_t *arg)
 {
-        NOT_YET_IMPLEMENTED("VM: sys_write");
-        return -1;
+        /*NOT_YET_IMPLEMENTED("VM: sys_write");*/
+	read_args_t kern_args;
+		int ret;
+
+		ret = copy_from_user(&kern_args, arg, sizeof(write_args_t));
+		if(ret < 0) {
+			curthr->kt_errno = -ret;
+			return -1;
+		}
+
+		void *temp_buf = page_alloc();
+
+		ret = copy_to_user(arg->buf, temp_buf, kern_args.nbytes);
+		if (ret < 0) {
+			curthr->kt_errno = -ret;
+			return -1;
+		}
+
+		int bytes_wrote = do_write(kern_args.fd, temp_buf, kern_args.nbytes);
+		if(bytes_wrote < 0) {
+			curthr->kt_errno = -bytes_wrote;
+			return -1;
+		}
+
+		page_free(temp_buf);
+
+		return bytes_wrote;
+
 }
 
 /*
