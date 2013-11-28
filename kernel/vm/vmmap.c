@@ -144,8 +144,14 @@ vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 vmarea_t *
 vmmap_lookup(vmmap_t *map, uint32_t vfn)
 {
-        /*NOT_YET_IMPLEMENTED("VM: vmmap_lookup");*/
-	KASSERT(NULL != map); /*pre-condition*/
+        vmarea_t *vmarea=NULL;
+	/*NOT_YET_IMPLEMENTED("VM: vmmap_lookup");*/
+	KASSERT(NULL != map); 
+	list_iterate_begin(&map->vmm_list,vmarea,vmarea_t,vma_plink){
+		if(vfn 	<=vmarea->vma_end && vfn >= vmarea->vma_start)
+			return vmarea;
+	}list_iterate_end();
+/*pre-condition*/
         return NULL;
 }
 
@@ -156,8 +162,29 @@ vmmap_lookup(vmmap_t *map, uint32_t vfn)
 vmmap_t *
 vmmap_clone(vmmap_t *map)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_clone");
-        return NULL;
+        /*NOT_YET_IMPLEMENTED("VM: vmmap_clone");*/
+		vmarea_t *vmarea=NULL;
+		vmarea_t *vmclone=NULL;
+		vmmap_t * clonemap=vmmap_create();
+		if(!clonemap)
+		{
+			return NULL;
+		}
+		list_iterate_begin(&map->vmm_list,vmarea,vmarea_t,vma_plink){
+			vmclone=vmarea_alloc();
+			if(vmclone){
+				vmclone->vma_prot=vmarea->vma_prot;
+				vmclone->vma_flags=vmarea->vma_flags;
+				vmclone->vma_start= vmarea->vma_start;
+				vmclone->vma_end=vmarea->vma_end;
+				vmclone->vma_off=vmarea->vma_off;
+				vmmap_insert(clonemap,vmclone);
+			}
+			else
+				return NULL;
+		}list_iterate_end();
+
+        return clonemap;
 }
 
 /* Insert a mapping into the map starting at lopage for npages pages.
@@ -198,7 +225,7 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 	KASSERT((MAP_SHARED & flags) || (MAP_PRIVATE & flags));
 	KASSERT((0 == lopage) || (ADDR_TO_PN(USER_MEM_LOW) <= lopage));
 	KASSERT((0 == lopage) || (ADDR_TO_PN(USER_MEM_HIGH) >= (lopage + npages)));
-	KASSERT(PAGE_ALIGNED(off));
+	/* KASSERT(PAGE_ALIGNED(off)); */
 
 
         return -1;
@@ -248,11 +275,21 @@ int
 vmmap_is_range_empty(vmmap_t *map, uint32_t startvfn, uint32_t npages)
 {
 	/*NOT_YET_IMPLEMENTED("VM: vmmap_is_range_empty"); */
-	uint32_t endvfn = startvfn + npages;
+	uint32_t endvfn = startvfn + npages -1;
+	/*not sure .. for envfn we should derement ir by 1*/
 	KASSERT((startvfn < endvfn) && (ADDR_TO_PN(USER_MEM_LOW) <= startvfn) && (ADDR_TO_PN(USER_MEM_HIGH) >= endvfn));
+	if(list_empty(&map->vmm_list)){
+		   return 1;
+	}
+	vmarea_t *vmarea;
+	list_iterate_begin(&(map->vmm_list), vmarea, vmarea_t, vma_plink){
+		if( (startvfn>=vmarea->vma_start && startvfn<=vmarea->vma_end ) || (endvfn>=vmarea->vma_start && endvfn<=vmarea->vma_end ))
+		{
+				return 0;
+		}
+	}list_iterate_end();
+	return 1;
 
-
-	return 0;
 }
 
 /* Read into 'buf' from the virtual address space of 'map' starting at
@@ -266,7 +303,35 @@ vmmap_is_range_empty(vmmap_t *map, uint32_t startvfn, uint32_t npages)
 int
 vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_read");
+        /*NOT_YET_IMPLEMENTED("VM: vmmap_read");*/
+	vmarea_t *vmarea;
+	pframe_t *pfrm;
+	uint32_t start = ADDR_TO_PN(vaddr); /* not sure about this*/
+	uint32_t end = ADDR_TO_PN((uint32_t)vaddr + count -1);
+	uint32_t i=0;
+	list_iterate_begin(&(map->vmm_list), vmarea, vmarea_t, vma_plink){
+		if( start>=vmarea->vma_start && start<=vmarea->vma_end )
+		{
+				for( i=start;i<=end && i<=vmarea->vma_end;i+=PAGE_SIZE)
+				{
+						int status = vmarea->vma_obj->mmo_ops->lookuppage(vmarea->vma_obj, i-vmarea->vma_start+vmarea->vma_off, 0, &pfrm);
+						if(status<0)
+								return status;
+						char *charBuf = (char*)buf;
+						memcpy(charBuf+i*PAGE_SIZE,pfrm->pf_addr,count-i*PAGE_SIZE);/*not sure about this*/
+
+
+				}
+
+				start = vmarea->vma_end + 1;
+		}
+		if(start > end)
+		{
+
+				return 0;
+		}
+	}list_iterate_end();
+
         return 0;
 }
 
@@ -281,8 +346,35 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 int
 vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_write");
-        return 0;
+	vmarea_t *vmarea;
+		pframe_t *pfrm;
+		uint32_t start = ADDR_TO_PN(vaddr); /* not sure about this  */
+		uint32_t end = ADDR_TO_PN((uint32_t)vaddr + count -1);
+		uint32_t i=0;
+		list_iterate_begin(&(map->vmm_list), vmarea, vmarea_t, vma_plink){
+			if( start>=vmarea->vma_start && start<=vmarea->vma_end )
+			{
+					for( i=start;i<=end && i<=vmarea->vma_end;i+=PAGE_SIZE)
+					{
+							int status = vmarea->vma_obj->mmo_ops->lookuppage(vmarea->vma_obj, i-vmarea->vma_start+vmarea->vma_off, 0, &pfrm);
+							if(status<0)
+									return status;
+							char *charBuf = (char*)buf;
+							memcpy(pfrm->pf_addr,charBuf+i*PAGE_SIZE,count-i*PAGE_SIZE);/*not sure about this*/
+							pframe_set_dirty(pfrm);
+
+					}
+
+					start = vmarea->vma_end + 1;
+			}
+			if(start > end)
+			{
+
+					return 0;
+			}
+		}list_iterate_end();
+
+	    return -1;
 }
 
 /* a debugging routine: dumps the mappings of the given address space. */
