@@ -95,97 +95,98 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
           vnode_t *base, vnode_t **res_vnode)
 {
 	/*NOT_YET_IMPLEMENTED("VFS: dir_namev");*/
-	KASSERT(NULL != pathname);
-	dbg(DBG_PRINT, "(GRADING2A 2.b)Input parameter pathname not null\n ");
-	KASSERT(NULL != namelen);
-	dbg(DBG_PRINT, "(GRADING2A 2.b)namelen pointer not null\n ");
-	KASSERT(NULL != name);
-	dbg(DBG_PRINT, "(GRADING2A 2.b)name pointer not null\n ");
-	KASSERT(NULL != res_vnode);
-	dbg(DBG_PRINT, "(GRADING2A 2.b)resultant pointer not null\n ");
+	        KASSERT(NULL != pathname);
+	        dbg(DBG_PRINT, "(GRADING2A 2.b)Input parameter pathname not null\n ");
+	        KASSERT(NULL != namelen);
+	        dbg(DBG_PRINT, "(GRADING2A 2.b)namelen pointer not null\n ");
+	        KASSERT(NULL != name);
+	        dbg(DBG_PRINT, "(GRADING2A 2.b)name pointer not null\n ");
+	        KASSERT(NULL != res_vnode);
+	        dbg(DBG_PRINT, "(GRADING2A 2.b)resultant pointer not null\n ");
 
 
-	int ret = 0;
-	vnode_t *result;
-	vnode_t* dir;
-	char* startPtr = (char*) pathname;
-	char* breakPtr = (char*) pathname;
-	char* endPtr = (char*) pathname + strlen(pathname);
-	char* extraPtr = NULL;
+	        int ret = 0;
+	        vnode_t *result;
+	        vnode_t* dir;
+	        char* startPtr = (char*) pathname;
+	        char* breakPtr = (char*) pathname;
+	        char* endPtr = (char*) pathname + strlen(pathname);
+	        char* extraPtr = NULL;
 
-	/*check if length check needed if not you can remove it
-	if(strlen(pathname) == 0) {
-		return -EINVAL;
-	} else if(strlen(pathname) > MAXPATHLEN) {
-		return -ENAMETOOLONG;
-	} */
+	        /*check if length check needed if not you can remove it
+	        if(strlen(pathname) == 0) {
+	                return -EINVAL;
+	        } else if(strlen(pathname) > MAXPATHLEN) {
+	                return -ENAMETOOLONG;
+	        } */
 
-	if (pathname[0] == '/') {
-		/*curproc->p_cwd = vfs_root_vn;*/
-		dir = vfs_root_vn;
+	        if (pathname[0] == '/') {
+	                /*curproc->p_cwd = vfs_root_vn;*/
+	                dir = vfs_root_vn;
 
-		startPtr++;
-		/*breakPtr++;*/
-	} else if (base == NULL) {
-		dir = curproc->p_cwd;
-	} else {
-		dir = base;
-	}
+	                startPtr++;
+	                /*breakPtr++;*/
+	        } else if (base == NULL) {
+	                dir = curproc->p_cwd;
+	        } else {
+	                dir = base;
+	        }
 
-	if(dir != NULL) {
-		vget(dir->vn_fs,dir->vn_vno);
-	}
-	while (breakPtr != endPtr) {
-                breakPtr = strchr(startPtr, '/');
-                extraPtr = breakPtr;
-                if( extraPtr != NULL) {
-                        while(*extraPtr == '/') {
-                                extraPtr++;
-                        }
-                }
-                if(breakPtr != NULL && breakPtr+1 != endPtr && extraPtr!=endPtr ) {
-                        if(dir == NULL) {
-                                vput(dir);
-                                return -ENOENT;
-                        } else if ( !S_ISDIR(dir->vn_mode) ) {
-                                vput(dir);
-                                return -ENOTDIR;
-                        }
-			KASSERT(NULL != dir);
-			dbg(DBG_PRINT,"(GRADING2A 2.b)Directory vnode is not NULL\n");
-                        int ret = lookup(dir, startPtr, breakPtr-startPtr, &result);
+	        if(dir != NULL) {
+	                vget(dir->vn_fs,dir->vn_vno);
+	        }
+	        while (breakPtr != endPtr) {
+	                breakPtr = strchr(startPtr, '/');
+	                extraPtr = breakPtr;
+	                if( extraPtr != NULL) {
+	                        while(*extraPtr == '/') {
+	                                extraPtr++;
+	                        }
+	                }
+	                if(breakPtr != NULL && breakPtr+1 != endPtr && extraPtr!=endPtr ) {
+	                        if(dir == NULL) {
+	                                vput(dir);
+	                                return -ENOENT;
+	                        } else if ( !S_ISDIR(dir->vn_mode) ) {
+	                                vput(dir);
+	                                return -ENOTDIR;
+	                        }
+	                        KASSERT(NULL != dir);
+	                        dbg(DBG_PRINT,"(GRADING2A 2.b)Directory vnode is not NULL\n");
+	                        int ret = lookup(dir, startPtr, breakPtr-startPtr, &result);
 
-                        vput(dir);
-                        if(ret < 0) {
+	                        vput(dir);
+	                        if(ret < 0) {
 
-                                return ret;
-                        }
-                        if ( !S_ISDIR(result->vn_mode) )
-                        {
-                                return -ENOTDIR;
-                        }
-                        dir = result;
-                        if( extraPtr == NULL) {
-                                breakPtr++;
-                        } else {
-                                breakPtr = extraPtr;
-                        }
-			startPtr = breakPtr;
-                } else {
-                        if(breakPtr+1 == endPtr) {
-                                endPtr--;
-                        }
-                        break;
-                }
-        }
-        *res_vnode = dir;
-        *name = (const char*) startPtr;
-        if( endPtr == extraPtr ) {
-                *namelen = breakPtr-startPtr;
-        } else {
-                *namelen = endPtr-startPtr;
-        }
-        return 0;
+	                                return ret;
+	                        }
+	                        if ( !S_ISDIR(result->vn_mode) )
+	                        {
+	                                return -ENOTDIR;
+	                        }
+	                        dir = result;
+	                        if( extraPtr == NULL) {
+	                                breakPtr++;
+	                        } else {
+	                                breakPtr = extraPtr;
+	                        }
+	                        startPtr = breakPtr;
+	                } else {
+	                        if(breakPtr+1 == endPtr) {
+	                                endPtr--;
+	                        }
+	                        break;
+	                }
+	        }
+	        *res_vnode = dir;
+	        *name = (const char*) startPtr;
+	        if( endPtr == extraPtr ) {
+	                *namelen = breakPtr-startPtr;
+	        } else {
+	                *namelen = endPtr-startPtr;
+	        }
+	        return 0;
+
 }
 
 /* This returns in res_vnode the vnode requested by the other parameters.
@@ -199,26 +200,44 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 int
 open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 {
-	const char *name = NULL;
-	size_t len;
-
-	int errno= dir_namev(pathname,&len,&name,base,res_vnode);
-	if ( errno >= 0) {
-		vput(*res_vnode);
-		if (len > NAME_LEN) {
-			return - ENAMETOOLONG;
-		}
-		errno = lookup(*res_vnode, name, len, res_vnode);
-		if ( errno == -ENOENT && (flag & O_CREAT) == O_CREAT) {
-			KASSERT(NULL != (*res_vnode)->vn_ops->create);
-			dbg(DBG_PRINT,
-					"(GRADING2A 2.c)create operation on vnode is present\n ");
-			errno = (*res_vnode)->vn_ops->create(*res_vnode, name, len,
-					res_vnode);
-
-		}
-	}
-	return errno;
+	KASSERT(pathname != NULL);
+	        size_t namelen=0;
+	        vnode_t *res_vnode1;
+	        const char *name=NULL;
+	        int i = dir_namev(pathname,&namelen,&name,base,&res_vnode1);
+	        if(i<0)
+	        {
+	                return i;
+	        }
+	        if (!S_ISDIR(res_vnode1->vn_mode))
+	        {
+	                /* Entry is not a directory */
+	                vput(res_vnode1);
+	                return -ENOTDIR;
+	        }
+	        dbg(DBG_VFS,"Calling lookup() to check for the file existence\n");
+	        int j=lookup(res_vnode1,name,namelen,res_vnode);
+	        if(j<0)
+	        {
+	                if(flag&O_CREAT)
+	                {
+	                        KASSERT(res_vnode1->vn_ops->create!=NULL);
+	                        int k=(res_vnode1->vn_ops->create)(res_vnode1,name,namelen,res_vnode);
+	                        if(k<0)
+	                        {
+	                                vput(res_vnode1);
+	                                return k;
+	                        }
+	                }
+	                else
+	                {
+	                        vput(res_vnode1);
+	                        return j;
+	                }
+	        }
+	       /* NOT_YET_IMPLEMENTED("VFS: open_namev");*/
+	        vput(res_vnode1);
+	        return 0;
 }
 
 #ifdef __GETCWD__

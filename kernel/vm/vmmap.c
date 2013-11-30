@@ -106,16 +106,22 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 	newvma->vma_vmmap = map;
 
 	vmarea_t* vma;
+	int flg=0;
 	if( list_empty(&map->vmm_list) ) {
 		list_insert_head(&map->vmm_list, &newvma->vma_plink);
 	} else {
 		list_iterate_begin(&map->vmm_list, vma, vmarea_t, vma_olink) {
 
-			if(vma->vma_start < newvma->vma_start && newvma->vma_end < vma->vma_end) {
+			if(vma->vma_start > newvma->vma_start ) {
 				list_insert_before(&vma->vma_plink, &newvma->vma_plink);
+				flg=1;
 				break;
 			}
 		}list_iterate_end();
+		if(flg)
+		{
+			list_insert_tail(&(map->vmm_list),&(newvma->vma_plink));
+		}
 	}
 
 
@@ -131,11 +137,40 @@ vmmap_insert(vmmap_t *map, vmarea_t *newvma)
 int
 vmmap_find_range(vmmap_t *map, uint32_t npages, int dir)
 {
-        /*NOT_YET_IMPLEMENTED("VM: vmmap_find_range");*/
-	/*2 pre-conditions*/
 	KASSERT(NULL != map);
 	KASSERT(0 < npages);
-        return -1;
+	int startvfn = -1, i=-1;
+	vmarea_t *area;
+
+	if(list_empty(&(map->vmm_list)))
+	{
+		return -1;
+	}
+
+	if(dir==VMMAP_DIR_HILO){
+			list_iterate_reverse(&(map->vmm_list), area, vmarea_t,vma_plink){
+					i = vmmap_is_range_empty(map,area->vma_start-(npages),area->vma_start-1);
+					if(i==1){
+							startvfn = area->vma_start-(npages);
+
+							break;
+					}
+			}list_iterate_end();
+			return startvfn;
+
+	}
+	if(dir==VMMAP_DIR_LOHI)
+	{
+			list_iterate_begin(&(map->vmm_list), area, vmarea_t,vma_plink){
+					i = vmmap_is_range_empty(map,area->vma_end+1,area->vma_end+npages);
+					if(i==1){
+							startvfn = area->vma_end+1;
+							break;
+					}
+			}list_iterate_end();
+			return startvfn;
+	}
+	return -1;
 }
 
 /* Find the vm_area that vfn lies in. Simply scan the address space
@@ -225,10 +260,73 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 	KASSERT((MAP_SHARED & flags) || (MAP_PRIVATE & flags));
 	KASSERT((0 == lopage) || (ADDR_TO_PN(USER_MEM_LOW) <= lopage));
 	KASSERT((0 == lopage) || (ADDR_TO_PN(USER_MEM_HIGH) >= (lopage + npages)));
-	/* KASSERT(PAGE_ALIGNED(off)); */
+	/*KASSERT(PAGE_ALIGNED(off));*/
+	vmarea_t *newvma;
+	file_t *f;
+	int status,start=0;
+	mmobj_t *newmmobj=NULL;
+	if(lopage==0){
+		start=vmmap_find_range(map,npages,dir);
+			if(!start)
+				return NULL;
 
+	}
+	else{
+		if(!vmmap_is_range_empty(map,lopage,npages)){
+			if(vmmap_remove(map,lopage,npages)!=0){
+				return -1;
+			}
+		}
+		start=lopage;
 
-        return -1;
+	}
+	newvma=vmarea_alloc();
+	if(newvma==NULL)
+		return -1;
+
+	newvma->vma_start = start;
+	newvma->vma_end = start+npages;
+	newvma->vma_off = off;
+	newvma->vma_prot = prot;
+	newvma->vma_flags = flags;
+
+	vmmap_insert(map, newvma);
+	if(file)
+	{
+		/*KASSERT(file->vn_ops!=NULL&&file->vn_ops->mmap!=NULL);*/
+		int i=file->vn_ops->mmap(file,newvma,&newmmobj);
+		if(i<0){
+			return i;
+		}
+		else{
+		mmobj_t *shadow;
+			if((shadow = shadow_create()) !=NULL){
+			   shadow->mmo_shadowed = newmmobj;
+			   (shadow)->mmo_un.mmo_bottom_obj = newmmobj;
+			   newmmobj->mmo_ops->ref(newmmobj);
+					newvma->vma_obj = shadow;
+			}
+		  }
+	}
+	else
+	{
+			if(flags!=MAP_PRIVATE){
+					newmmobj=anon_create();
+					/*newvma->vma_off = 0;
+					newvma->vma_prot = PROT_NONE;
+					newvma->vma_flags = 0;*/
+			}
+			else
+					newmmobj=shadow_create();
+
+			if(newmmobj==NULL)
+					return -1;
+				 newvma->vma_obj = newmmobj;
+				 newmmobj->mmo_ops->ref(newmmobj);
+	}
+	list_insert_tail(&(newvma->vma_obj->mmo_un.mmo_vmas),&(newvma->vma_olink));
+	new=&newvma;
+	return 0;
 }
 
 /*
@@ -263,8 +361,60 @@ vmmap_map(vmmap_t *map, vnode_t *file, uint32_t lopage, uint32_t npages,
 int
 vmmap_remove(vmmap_t *map, uint32_t lopage, uint32_t npages)
 {
-        NOT_YET_IMPLEMENTED("VM: vmmap_remove");
-        return -1;
+	if(list_empty(&(map->vmm_list))){
+		return -1;
+	}
+	  uint32_t start,end;
+	  start = lopage;
+	  end = start + npages ;
+	vmarea_t *vma;
+	list_iterate_begin(&(map->vmm_list), vma, vmarea_t, vma_plink)
+	{
+        if( start > vma->vma_start && end<vma->vma_end ) /* case 1 */
+		{
+			vma -> vma_off = 0;
+			vmarea_t* newvma = vmarea_alloc();
+			*newvma = *vma;
+			list_link_init( &newvma->vma_plink );
+			list_link_init( &newvma->vma_olink );
+			newvma -> vma_end = lopage;
+			vma -> vma_start = lopage + npages;
+			list_insert_before(&vma->vma_plink,&newvma->vma_plink);
+			list_insert_before(&vma->vma_olink,&newvma->vma_olink);
+
+			vma->vma_obj->mmo_ops->ref(vma->vma_obj);
+		}
+		else if( start>vma->vma_start && start<=vma->vma_end && end>=vma->vma_end ) /* case 2 */
+		{
+
+		   vma->vma_end = lopage;
+
+		}
+		else if( start<=vma->vma_start && end<vma->vma_end && end>=vma->vma_start ) /* case 3 */
+		{
+
+		   vma->vma_off = vma->vma_off +lopage+npages-vma->vma_start;
+		   vma->vma_start = lopage+npages;
+
+		}
+		else if(start<=vma->vma_start && end>=vma->vma_end) /* case 4 */
+		{
+
+		   list_remove(&vma->vma_plink);
+		   list_remove(&vma->vma_olink);
+		   if ( vma->vma_obj != NULL )
+				   vma->vma_obj->mmo_ops->put(vma->vma_obj);
+		   vmarea_free(vma);
+		}
+		else if( start<vma->vma_start && end<vma->vma_start ) /* case 5 */
+		{
+
+			   return 0;
+		}
+
+	}list_iterate_end();
+
+			return 0;
 }
 
 /*

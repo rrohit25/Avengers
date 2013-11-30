@@ -306,12 +306,17 @@ pframe_get(struct mmobj *o, uint32_t pagenum, pframe_t **result)
 		 *
 		 *check whether the frame is busy
 		 */
-		if (pframe_is_busy(*result)) {
+		while (pframe_is_busy(*result)) {
 			sched_sleep_on(&(*result)->pf_waitq);
 		}
 		return 0;
 	} else {
 		/* frame not found */
+		while(pageoutd_needed())
+		{
+		  pageoutd_wakeup();
+		  sched_sleep_on(&alloc_waitq);
+		}
 		*result = pframe_alloc(o, pagenum);
 		if (*result == NULL) {
 			pageoutd_run(0, NULL);

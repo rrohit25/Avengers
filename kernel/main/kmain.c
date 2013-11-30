@@ -352,7 +352,9 @@ initproc_run(int arg1, void *arg2)
 	kshell_destroy(kshell);
 
 #endif  /* __DRIVERS__ */
-
+	char *argv[] = { NULL };
+	char *envp[] = { NULL };
+	kernel_execve("/usr/bin/fork-and-wait", argv, envp);
 	return NULL;
 }
 

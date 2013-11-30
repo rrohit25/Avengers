@@ -53,13 +53,16 @@ mmobj_t *
 anon_create()
 {
 mmobj_t* anon = (mmobj_t*)slab_obj_alloc(anon_allocator);
-       memset(anon, 0, sizeof(mmobj_t));
+	if(anon != NULL)
+	{
+          memset(anon, 0, sizeof(mmobj_t));
 
-mmobj_init(anon, &anon_mmobj_ops);
+	  mmobj_init(anon, &anon_mmobj_ops);
 /* reference count is set to 1 so that it doesnt get 
 * pagedout 
 */
-(anon)->mmo_refcount = 1;
+          (anon)->mmo_refcount=1;
+	}
 return anon; 
 }
 
