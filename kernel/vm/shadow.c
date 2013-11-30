@@ -52,7 +52,10 @@ static mmobj_ops_t shadow_mmobj_ops = {
 void
 shadow_init()
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_init");
+	/* NOT_YET_IMPLEMENTED("VM: shadow_init"); */
+        shadow_allocator = slab_allocator_create("shadow", sizeof(mmobj_t));
+        KASSERT(shadow_allocator);
+
 }
 
 /*
@@ -64,8 +67,13 @@ shadow_init()
 mmobj_t *
 shadow_create()
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_create");
-        return NULL;
+        /*NOT_YET_IMPLEMENTED("VM: shadow_create");*/
+	mmobj_t *shadow = (mmobj_t*)slab_obj_alloc(shadow_allocator);
+	memset(shadow, 0, sizeof(mmobj_t));
+	mmobj_init(shadow, &shadow_mmobj_ops);
+	shadow->mmo_refcount=1;	
+	return shadow;	
+	
 }
 
 /* Implementation of mmobj entry points: */
@@ -76,7 +84,10 @@ shadow_create()
 static void
 shadow_ref(mmobj_t *o)
 {
-        NOT_YET_IMPLEMENTED("VM: shadow_ref");
+         /*  NOT_YET_IMPLEMENTED("VM: shadow_ref"); */
+        KASSERT(o && (0 < o->mmo_refcount) && (&shadow_mmobj_ops == o->mmo_ops));
+        o-> mmo_refcount ++;
+
 }
 
 /*
