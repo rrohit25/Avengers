@@ -387,7 +387,9 @@ pframe_pin(pframe_t *pf)
 {
 	/*NOT_YET_IMPLEMENTED("VM: pframe_pin");*/
 	KASSERT(!pframe_is_free(pf));
+	dbg(DBG_PRINT, "(GRADING3A 1.a) PF_BUSY flag of the page frame has not been set\n ");
 	KASSERT(pf->pf_pincount >= 0);
+	dbg(DBG_PRINT, "(GRADING3A 1.a) Pin count on the page is greater than 0\n ");
 
 	if (pf->pf_pincount == 0) {
 		/*remove this pframe's list link from the allocated list and add it to the pinned list */
@@ -414,7 +416,9 @@ pframe_unpin(pframe_t *pf)
 {
 	/*NOT_YET_IMPLEMENTED("VM: pframe_unpin");*/
 	KASSERT(!pframe_is_free(pf));
+	dbg(DBG_PRINT, "(GRADING3A 1.b) PF_BUSY flag of the page frame has not been set\n ");
 	KASSERT(pf->pf_pincount > 0);
+	dbg(DBG_PRINT, "(GRADING3A 1.b) Pin count on the page is greater than 0\n ");
 
 	pf->pf_pincount--;
 	npinned--;
