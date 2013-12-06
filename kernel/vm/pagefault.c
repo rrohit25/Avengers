@@ -34,9 +34,9 @@
  * EFAULT (normally we would send the SIGSEGV signal, however
  * Weenix does not support signals).
  *
- * Now it is time to find the correct page (don't forget
+ * Now it is time to find the correct page (don't forget                
  * about shadow objects, especially copy-on-write magic!). Make
- * sure that if the user writes to the page it will be handled
+ * sure that if the user writes to the page it will be handled  NOTE : don't know what does this mean
  * correctly.
  *
  * Finally call pt_map to have the new mapping placed into the
@@ -48,51 +48,54 @@
  *              address which caused the fault, possible values
  *              can be found in pagefault.h
  */
+
 void
 handle_pagefault(uintptr_t vaddr, uint32_t cause)
 {
-        /*NOT_YET_IMPLEMENTED("VM: handle_pagefault");*/
+        /* This function is called from mm/pagetable.c
+There are 5 types of faults:-
+1. FAULT_USER-Fault from user space
+2. FAULT_PRESENT-Fault present or not
+ 3. FAULT_RESERVED-Fault if access is PROT_NONE
+4. FAULT_WRITE-Fault if access is PROT_WRITE
+5. FAULT_EXEC-Fault if access is PROT_EXEC
+NOTE: FAULT_READ cannnot take place in OS
+*/
 
-	vmarea_t* vma_fault = vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(vaddr));
+    pagedir_t *pagetemp;
+     uint32_t vfn=ADDR_TO_PN(vaddr);
+    vmarea_t *vma;
+    vma=vmmap_lookup(curproc->p_vmmap, vfn);
+    dbg_print("== anon object = 0x%p ,area = 0x%p, pagenum = %d vaddr= %d\n",vma->vma_obj,vma,PAGE_OFFSET(vfn),vaddr);
+     
+    if (vma==NULL)
+    {
+        dbg_print("VMA null\n");
+        proc_kill(curproc, EFAULT);
+        return;
+    }
+    if ((cause & FAULT_PRESENT) && !(vma->vma_prot & PROT_READ)) {
+         proc_kill(curproc, EFAULT);
+        return;
+    }
+    if ((cause & FAULT_WRITE) && !(vma->vma_prot & PROT_WRITE)) {
+        proc_kill(curproc, EFAULT);
+        return;
+    }
+     if ((cause & FAULT_EXEC) && !(vma->vma_prot & PROT_EXEC)) {
+        proc_kill(curproc, EFAULT);
+        return;
+    }
+    if ((cause & FAULT_RESERVED) && (vma->vma_prot & PROT_NONE)) {
+         proc_kill(curproc, EFAULT);
+        return;
+    }
 
-	if( vma_fault == NULL ) {
-		proc_kill(curproc, EFAULT);
-		return;
-	}
-	/*check for all these :
-		FAULT_PRESENT  0x01
-		FAULT_WRITE    0x02
-		FAULT_USER     0x04
-		FAULT_RESERVED 0x08
-		FAULT_EXEC     0x10
-	 */
-
-	/*have to write for present, user and reserved*/
-
-	if( (cause & FAULT_WRITE) && !(vma_fault->vma_flags & PROT_WRITE) ) {
-		proc_kill(curproc, EFAULT);
-		return;
-	}
-
-	if(( cause & FAULT_EXEC) && !(vma_fault->vma_flags & PROT_EXEC)) {
-		proc_kill(curproc, EFAULT);
-		return;
-	}
-
-
-	/*Once all the error conditions are handled, get a frame.
-	 * We are supposed to handle copy on write .. Is this done in page fault or pframe_get() ????????*/
-	pframe_t* res_pframe = NULL;
-	int ret = pframe_get(vma_fault->vma_obj, PAGE_OFFSET(vaddr), &res_pframe);
-	if(ret < 0) {
-		return;
-	}
-
-	pframe_clear_busy(res_pframe);
-
-
-	uintptr_t paddr = pt_virt_to_phys((uintptr_t)res_pframe->pf_addr);
-
-	pt_map(curproc->p_pagedir, vaddr, paddr, PD_PRESENT|PD_WRITE|PD_USER, PT_PRESENT|PT_WRITE|PT_USER);
+    pframe_t *pget;
+    int a=pframe_get(vma->vma_obj,vfn-vma->vma_start+vma->vma_off,&pget);
+    if(a<0)
+        return;
+     uintptr_t pageaddr=pt_virt_to_phys((uint32_t)pget->pf_addr);
+    pt_map(curproc->p_pagedir,(uintptr_t)PAGE_ALIGN_DOWN(vaddr),pageaddr,PD_PRESENT|PD_WRITE|PD_USER, PT_PRESENT|PT_WRITE|PT_USER);
 
 }

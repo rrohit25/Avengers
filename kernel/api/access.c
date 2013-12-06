@@ -122,7 +122,19 @@ fail:
  */
 int addr_perm(struct proc *p, const void *vaddr, int perm)
 {
-        NOT_YET_IMPLEMENTED("VM: addr_perm");
+
+        vmmap_t *map = p->p_vmmap;
+        if(NULL != map){
+                vmarea_t *vma = vmmap_lookup(map,*((uint32_t*)vaddr));
+                if(NULL != vma){
+                        if((vma->vma_prot & PROT_READ == PROT_READ) ||
+                           (vma->vma_prot & PROT_WRITE == PROT_WRITE) ||
+                           (vma->vma_port & PROT_EXEC == PROT_EXEC))
+                        {
+                        	return 1;
+                        }
+                }
+        }
         return 0;
 }
 
@@ -137,6 +149,20 @@ int addr_perm(struct proc *p, const void *vaddr, int perm)
  */
 int range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
 {
-        NOT_YET_IMPLEMENTED("VM: range_perm");
-        return 0;
+        int ret = addr_perm(p,avaddr,perm);
+        if(ret){
+                uint32_t newaddr = *((uint32_t*)avaddr);
+                vmarea_t *vma = NULL;
+        repeat:        vma = vmmap_lookup(p->p_vmmap, newaddr);
+                while(vma->vma_end >=newaddr && newaddr< *((uint32_t*)avaddr)+len){
+                        newaddr +=+1;
+                        }
+                
+                ret = addr_perm(p,&newaddr, perm);
+                if(ret && newaddr< (*((uint32_t*)avaddr)+len-1))
+                        goto repeat;
+        }
+
+        if(ret)
+        return ret;
 }
