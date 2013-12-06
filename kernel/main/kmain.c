@@ -346,15 +346,16 @@ initproc_run(int arg1, void *arg2)
 	kshell_add_command("vfstest", vfs_test, "VFS test");
 	kshell_add_command("renametest", extra_vfs_test, "student rename test(vfs)");
 #endif
+	char *argv[] = { NULL };
+	char *envp[] = { NULL };
+	kernel_execve("/usr/bin/fork-and-wait", argv, envp);
 	kshell_t *kshell = kshell_create(0);
 	if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
 	while (kshell_execute_next(kshell));
 	kshell_destroy(kshell);
 
 #endif  /* __DRIVERS__ */
-	char *argv[] = { NULL };
-	char *envp[] = { NULL };
-	kernel_execve("/usr/bin/fork-and-wait", argv, envp);
+	
 	return NULL;
 }
 

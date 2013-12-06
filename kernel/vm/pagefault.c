@@ -67,7 +67,7 @@ NOTE: FAULT_READ cannnot take place in OS
     vmarea_t *vma;
     vma=vmmap_lookup(curproc->p_vmmap, vfn);
     dbg_print("== anon object = 0x%p ,area = 0x%p, pagenum = %d vaddr= %d\n",vma->vma_obj,vma,PAGE_OFFSET(vfn),vaddr);
-     
+
     if (vma==NULL)
     {
         dbg_print("VMA null\n");

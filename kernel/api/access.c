@@ -122,20 +122,21 @@ fail:
  */
 int addr_perm(struct proc *p, const void *vaddr, int perm)
 {
-
+        int i = 0;
         vmmap_t *map = p->p_vmmap;
-        if(NULL != map){
+        if(map){
                 vmarea_t *vma = vmmap_lookup(map,*((uint32_t*)vaddr));
-                if(NULL != vma){
-                        if((vma->vma_prot & PROT_READ == PROT_READ) ||
-                           (vma->vma_prot & PROT_WRITE == PROT_WRITE) ||
-                           (vma->vma_port & PROT_EXEC == PROT_EXEC))
-                        {
-                        	return 1;
+                if(vma){
+                        int vmaperm = vma->vma_prot;
+                        if(vmaperm & perm){
+                                i = 1;
                         }
                 }
         }
-        return 0;
+        if(i)
+        dbg(DBG_VM,"INFO: The given address 0x%x has required permissions",*((uint32_t*)vaddr));
+        /*NOT_YET_IMPLEMENTED("VM: ***none***");*/
+        return i;
 }
 
 /*
@@ -149,8 +150,8 @@ int addr_perm(struct proc *p, const void *vaddr, int perm)
  */
 int range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
 {
-        int ret = addr_perm(p,avaddr,perm);
-        if(ret){
+        int i = addr_perm(p,avaddr,perm);
+        if(i){
                 uint32_t newaddr = *((uint32_t*)avaddr);
                 vmarea_t *vma = NULL;
         repeat:        vma = vmmap_lookup(p->p_vmmap, newaddr);
@@ -158,11 +159,13 @@ int range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
                         newaddr +=+1;
                         }
                 
-                ret = addr_perm(p,&newaddr, perm);
-                if(ret && newaddr< (*((uint32_t*)avaddr)+len-1))
+                i = addr_perm(p,&newaddr, perm);
+                if(i&&newaddr< (*((uint32_t*)avaddr)+len-1))
                         goto repeat;
         }
 
-        if(ret)
-        return ret;
+        if(i)
+        dbg(DBG_VM,"INFO: The given address range 0x%x-0x%x has required permissions",*((uint32_t*)avaddr),*((uint32_t*)avaddr)+len);
+        /*NOT_YET_IMPLEMENTED("VM: ***none***");*/
+        return i;
 }
