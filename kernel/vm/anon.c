@@ -41,7 +41,7 @@ anon_init()
 {
        anon_allocator = slab_allocator_create("anonobj", sizeof(mmobj_t));
        KASSERT(NULL != anon_allocator);
-       dbg(DBG_PRINT, "(GRADING3A 4.a)anon_allocator is successfully created\n "); 
+       dbg(DBG_PRINT, "(GRADING3A 4.a)anon object is successfully created\n "); 
 /* NOT_YET_IMPLEMENTED("VM: anon_init");*/
 }
 
@@ -147,9 +147,9 @@ anon_fillpage(mmobj_t *o,pframe_t *pf)
  /*NOT_YET_IMPLEMENTED("VM: anon_fillpage");*/
        
         KASSERT(pframe_is_busy(pf));        
-       dbg(DBG_PRINT, "(GRADING3A 4.d)Page frame is busy\n ");
+       dbg(DBG_PRINT, "(GRADING3A 4.d)PF_BUSY flag set for the page frame\n ");
 	 KASSERT(!pframe_is_pinned(pf));    
-	dbg(DBG_PRINT, "(GRADING3A 4.d)Page frame is pinned\n ");    
+	dbg(DBG_PRINT, "(GRADING3A 4.d)Page frame is NOT pinned\n ");    
                memset(pf->pf_addr,0,PAGE_SIZE);
 	return 0;
                

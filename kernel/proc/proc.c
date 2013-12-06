@@ -109,6 +109,8 @@ proc_create(char *name)
 	if (pid == PID_INIT) {
 		proc_initproc = new_proc;
 	}
+	vmmap_t *map=vmmap_create();
+	new_proc->p_vmmap=map;
 	sched_queue_init(&new_proc->p_wait);
 	return new_proc;
 }

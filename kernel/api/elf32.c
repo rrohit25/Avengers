@@ -129,9 +129,15 @@ static int _elf32_map_segment(vmmap_t *map, vnode_t *file, int32_t memoff, const
                                                   buf, PAGE_OFFSET(addr + filesz));
                         }
                         page_free(buf);
+	char bufff[500];
+    vmmap_mapping_info(map,bufff,500);
+    dbg_print("%s\n",bufff);
                         return ret;
                 }
         }
+	char bufff[500];
+    vmmap_mapping_info(map,bufff,500);
+    dbg_print("%s\n",bufff);
         return 0;
 }
 
@@ -655,6 +661,9 @@ static int _elf32_load(const char *filename, int fd, char *const argv[],
         dbg(DBG_ELF, "Past the point of no return. Swapping to map at 0x%p, setting brk to 0x%p\n", map, proghigh);
         /* the final threshold / What warm unspoken secrets will we learn? / Beyond
          * the point of no return ... */
+	char bufff[500];
+    vmmap_mapping_info(map,bufff,500);
+    dbg_print("%s\n",bufff);
 
         /* Give the process the new mappings. */
         vmmap_t *tempmap = curproc->p_vmmap;
@@ -712,6 +721,7 @@ done:
         if (NULL != argbuf) {
                 kfree(argbuf);
         }
+
         return err;
 }
 
