@@ -299,6 +299,15 @@ int vfs_test(kshell_t* kshell, int argc, char **argv) {
 	return 0;
 }
 
+
+int helloWorldProg(kshell_t* kshell, int arg1, char **argv)
+{
+	char *argb[] = { NULL };
+	char *envp[] = { NULL };
+	kernel_execve("/usr/bin/fork-and-wait", argb, envp);
+	return 0;
+
+}
 int extra_vfs_test(kshell_t* kshell, int arg1, char **argv)
 {
     char *before="file1";
@@ -346,9 +355,9 @@ initproc_run(int arg1, void *arg2)
 	kshell_add_command("vfstest", vfs_test, "VFS test");
 	kshell_add_command("renametest", extra_vfs_test, "student rename test(vfs)");
 #endif
-	char *argv[] = { NULL };
-	char *envp[] = { NULL };
-	kernel_execve("/usr/bin/fork-and-wait", argv, envp);
+#ifdef __VM__
+	kshell_add_command("helloworld", helloWorldProg, "Run helloworld program");
+#endif
 	kshell_t *kshell = kshell_create(0);
 	if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
 	while (kshell_execute_next(kshell));
