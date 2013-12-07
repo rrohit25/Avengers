@@ -302,12 +302,54 @@ int vfs_test(kshell_t* kshell, int argc, char **argv) {
 
 int helloWorldProg(kshell_t* kshell, int arg1, char **argv)
 {
+	kshell_destroy(kshell);
 	char *argb[] = { NULL };
 	char *envp[] = { NULL };
-	kernel_execve("/usr/bin/fork-and-wait", argb, envp);
+	kernel_execve("/usr/bin/hello", argb, envp);
 	return 0;
 
 }
+
+int u_name(kshell_t *kshell, int argc, char **argv)
+{
+ 	char *argb[] = { NULL };
+ 	char *envp[] = { NULL };
+ 	kernel_execve("/bin/uname", argb,envp);
+ 	return 0;
+}
+
+int arguments(kshell_t *kshell, int argc, char **argv)
+{
+	char *argb[] = { NULL };
+	char *envp[] = { "ab cde fghi j" };
+	kernel_execve("/usr/bin/args", argb,envp);
+	return 0;
+}
+
+int segment_fault(kshell_t *kshell, int argc, char **argv)
+{
+	char *argb[] = { NULL };
+	char *envp[] = { NULL };
+	kernel_execve("/usr/bin/segfault", argb,envp);
+	return 0;
+}
+
+int vfs578(kshell_t *kshell, int argc, char **argv)
+{
+	char *argb[] = { NULL };
+	char *envp[] = { NULL };
+	kernel_execve("/usr/bin/vfstest", argb,envp);
+	return 0;
+}
+
+int init_shell(kshell_t *kshell, int argc, char **argv)
+{
+	char *argb[] = { NULL };
+	char *envp[] = { NULL };
+	kernel_execve("/sbin/init", argb,envp);
+	return 0;
+}
+
 int extra_vfs_test(kshell_t* kshell, int arg1, char **argv)
 {
     char *before="file1";
@@ -352,11 +394,16 @@ initproc_run(int arg1, void *arg2)
 	kshell_add_command("deadlock", deadlock_test, "Deadlock test");
 	kshell_add_command("testproc", faber_test, "Faber test");
 #ifdef __VFS__
-	kshell_add_command("vfstest", vfs_test, "VFS test");
+
 	kshell_add_command("renametest", extra_vfs_test, "student rename test(vfs)");
 #endif
 #ifdef __VM__
-	kshell_add_command("helloworld", helloWorldProg, "Run helloworld program");
+	kshell_add_command("hello", helloWorldProg, "Run helloworld program");
+	kshell_add_command("args", arguments, "Executes arguments test");
+	kshell_add_command("vfstest", vfs578, "Tests 578 tests in vftest");
+	kshell_add_command("user_shell", init_shell, "get the user space shell");
+	kshell_add_command("uname", u_name, "Executes uname test");
+	kshell_add_command("segfault", segment_fault, "Test segment fault");
 #endif
 	kshell_t *kshell = kshell_create(0);
 	if (NULL == kshell) panic("init: Couldn't create kernel shell\n");
