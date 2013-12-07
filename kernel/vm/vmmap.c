@@ -241,7 +241,7 @@ vmmap_clone(vmmap_t *map)
                                                 vmmap_insert(clonemap,vmclone);
                                 }
                                 else{
-                                        vmmap_destroy(vmclone);
+                                        vmmap_destroy(map);
                                         return NULL;
                                 }
                 }list_iterate_end();
@@ -521,10 +521,13 @@ vmmap_read(vmmap_t *map, const void *vaddr, void *buf, size_t count)
 				if(frame)
 				{
 						if(count<=PAGE_SIZE-PAGE_OFFSET((uintptr_t)vaddr))
-								memcpy(buf,frame->pf_addr+PAGE_OFFSET((uintptr_t)vaddr),count);
+								memcpy((char*)buf,
+									(char*)frame->pf_addr+PAGE_OFFSET(vaddr),count);
 						else
 						{
-								memcpy(buf,frame->pf_addr,PAGE_SIZE-PAGE_OFFSET((uintptr_t)vaddr));
+								memcpy(buf,
+									frame->pf_addr,
+									PAGE_SIZE-PAGE_OFFSET(vaddr));
 								count-=PAGE_SIZE-PAGE_OFFSET((uintptr_t)vaddr);
 						}
 				}
@@ -582,12 +585,12 @@ vmmap_write(vmmap_t *map, void *vaddr, const void *buf, size_t count)
 					pframe_get(area->vma_obj,vfn-area->vma_start+area->vma_off,&frame);
 					if(frame)
 					{
-							if(count<=PAGE_SIZE-PAGE_OFFSET((uintptr_t)vaddr))
-									memcpy(frame->pf_addr+PAGE_OFFSET((uintptr_t)vaddr),buf,count);
+							if(count<=PAGE_SIZE-PAGE_OFFSET(vaddr))
+									memcpy((char*)frame->pf_addr+PAGE_OFFSET(vaddr),(char*)buf,count);
 							else
 							{
-									memcpy(frame->pf_addr,buf,PAGE_SIZE-PAGE_OFFSET((uintptr_t)vaddr));
-									count=count+PAGE_SIZE-PAGE_OFFSET((uintptr_t)vaddr);
+									memcpy(frame->pf_addr,buf,PAGE_SIZE-PAGE_OFFSET(vaddr));
+									count=count+PAGE_SIZE-PAGE_OFFSET(vaddr);
 							}
 					}
 							size--;
