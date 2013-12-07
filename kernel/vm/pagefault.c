@@ -63,39 +63,48 @@ NOTE: FAULT_READ cannnot take place in OS
 */
 
     pagedir_t *pagetemp;
-     uint32_t vfn=ADDR_TO_PN(vaddr);
-    vmarea_t *vma;
-    vma=vmmap_lookup(curproc->p_vmmap, vfn);
-    dbg_print("== anon object = 0x%p ,area = 0x%p, pagenum = %d vaddr= %d\n",vma->vma_obj,vma,PAGE_OFFSET(vfn),vaddr);
 
-    if (vma==NULL)
-    {
-        dbg_print("VMA null\n");
-        proc_kill(curproc, EFAULT);
-        return;
-    }
-    if ((cause & FAULT_PRESENT) && !(vma->vma_prot & PROT_READ)) {
+
+    vmarea_t* vma_fault = vmmap_lookup(curproc->p_vmmap, ADDR_TO_PN(vaddr));
+
+	if (vma_fault == NULL) {
+		proc_kill(curproc, EFAULT);
+		return;
+	}
+	/*check for all these :
+	 FAULT_PRESENT  0x01
+	 FAULT_WRITE    0x02
+	 FAULT_USER     0x04
+	 FAULT_RESERVED 0x08
+	 FAULT_EXEC     0x10
+	 */
+    if ((cause & FAULT_PRESENT) && !(vma_fault->vma_prot & PROT_READ)) {
          proc_kill(curproc, EFAULT);
         return;
     }
-    if ((cause & FAULT_WRITE) && !(vma->vma_prot & PROT_WRITE)) {
+    if ((cause & FAULT_WRITE) && !(vma_fault->vma_prot & PROT_WRITE)) {
         proc_kill(curproc, EFAULT);
         return;
     }
-     if ((cause & FAULT_EXEC) && !(vma->vma_prot & PROT_EXEC)) {
+     if ((cause & FAULT_EXEC) && !(vma_fault->vma_prot & PROT_EXEC)) {
         proc_kill(curproc, EFAULT);
         return;
     }
-    if ((cause & FAULT_RESERVED) && (vma->vma_prot & PROT_NONE)) {
+    if ((cause & FAULT_RESERVED) && (vma_fault->vma_prot & PROT_NONE)) {
          proc_kill(curproc, EFAULT);
         return;
     }
 
-    pframe_t *pget;
-    int a=pframe_get(vma->vma_obj,vfn-vma->vma_start+vma->vma_off,&pget);
-    if(a<0)
-        return;
-     uintptr_t pageaddr=pt_virt_to_phys((uint32_t)pget->pf_addr);
+    pframe_t* res_pframe = NULL;
+
+    uint32_t arg2 = (ADDR_TO_PN(vaddr)) - (vma_fault->vma_start) + (vma_fault->vma_off);
+
+	int ret = pframe_get(vma_fault->vma_obj, arg2 ,	&res_pframe);
+	if (ret < 0) {
+		return;
+	}
+
+    uintptr_t pageaddr=pt_virt_to_phys((uint32_t)res_pframe->pf_addr);
     pt_map(curproc->p_pagedir,(uintptr_t)PAGE_ALIGN_DOWN(vaddr),pageaddr,PD_PRESENT|PD_WRITE|PD_USER, PT_PRESENT|PT_WRITE|PT_USER);
 
 }
