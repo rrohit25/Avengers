@@ -200,44 +200,47 @@ dir_namev(const char *pathname, size_t *namelen, const char **name,
 int
 open_namev(const char *pathname, int flag, vnode_t **res_vnode, vnode_t *base)
 {
-	KASSERT(pathname != NULL);
+	        KASSERT(pathname != NULL);
 	        size_t namelen=0;
-	        vnode_t *res_vnode1;
+	        vnode_t *res_vnode1 = NULL;
 	        const char *name=NULL;
-	        int i = dir_namev(pathname,&namelen,&name,base,&res_vnode1);
-	        if(i<0)
+	        int ret = dir_namev(pathname,&namelen,&name,base,&res_vnode1);
+	        if(0 > ret)
 	        {
-	                return i;
+	                return ret;
 	        }
+		else {
 	        if (!S_ISDIR(res_vnode1->vn_mode))
 	        {
-	                /* Entry is not a directory */
 	                vput(res_vnode1);
 	                return -ENOTDIR;
 	        }
-	        dbg(DBG_VFS,"Calling lookup() to check for the file existence\n");
-	        int j=lookup(res_vnode1,name,namelen,res_vnode);
-	        if(j<0)
+	        else {
+		ret =lookup(res_vnode1,name,namelen,res_vnode);
+		if(0 > ret)
 	        {
 	                if(flag&O_CREAT)
 	                {
 	                        KASSERT(res_vnode1->vn_ops->create!=NULL);
-	                        int k=(res_vnode1->vn_ops->create)(res_vnode1,name,namelen,res_vnode);
-	                        if(k<0)
+                                dbg(DBG_PRINT,"(GRADING2A 2.c)create operation on vnode is present\n ");
+				ret = (res_vnode1->vn_ops->create)(res_vnode1,name,namelen,res_vnode);
+	                        if(0 > ret)
 	                        {
 	                                vput(res_vnode1);
-	                                return k;
+	                                return ret;
 	                        }
 	                }
 	                else
 	                {
 	                        vput(res_vnode1);
-	                        return j;
+	                        return ret;
 	                }
 	        }
-	       /* NOT_YET_IMPLEMENTED("VFS: open_namev");*/
-	        vput(res_vnode1);
-	        return 0;
+	          vput(res_vnode1);
+		}
+	        }
+		return 0;
+		
 }
 
 #ifdef __GETCWD__
