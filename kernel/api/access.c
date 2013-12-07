@@ -167,4 +167,7 @@ int range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
 
         if(ret)
         return ret;
+	else
+	return -1;	
+
 }
