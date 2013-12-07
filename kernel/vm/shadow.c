@@ -189,9 +189,9 @@ shadow_fillpage(mmobj_t *o, pframe_t *pf)
            pfrm = list_item(link, pframe_t, pf_olink);
            if(pfrm->pf_pagenum == pf->pf_pagenum)
            {
-             memcpy(pf->pf_addr+PAGE_OFFSET(pf->pf_addr),
+             /*memcpy(pf->pf_addr+PAGE_OFFSET(pf->pf_addr),
 		    pfrm->pf_addr + PAGE_OFFSET(pfrm->pf_addr),
-		    PAGE_SIZE - PAGE_OFFSET(pfrm->pf_addr));
+		    PAGE_SIZE - PAGE_OFFSET(pfrm->pf_addr)); */
              return 0;
            }
 	   link = link->l_next;
@@ -220,7 +220,9 @@ shadow_cleanpage(mmobj_t *o, pframe_t *pf)
         int status = pframe_get(o, pf->pf_pagenum, &pfrm);
         if(status<0)
                 return status;
-        memcpy(pfrm->pf_addr+PAGE_OFFSET(pfrm->pf_addr),
+       /* memcpy(pfrm->pf_addr+PAGE_OFFSET(pfrm->pf_addr),
 	       pf->pf_addr+PAGE_OFFSET(pf->pf_addr),
-	       PAGE_SIZE-PAGE_OFFSET(pf->pf_addr));
+	       PAGE_SIZE-PAGE_OFFSET(pf->pf_addr));*/
+
+	return 0;
 }

@@ -122,21 +122,19 @@ fail:
  */
 int addr_perm(struct proc *p, const void *vaddr, int perm)
 {
-        int i = 0;
-        vmmap_t *map = p->p_vmmap;
-        if(map){
-                vmarea_t *vma = vmmap_lookup(map,*((uint32_t*)vaddr));
-                if(vma){
-                        int vmaperm = vma->vma_prot;
-                        if(vmaperm & perm){
-                                i = 1;
-                        }
-                }
+   vmarea_t *vmarea = NULL;
+   if(NULL != p->p_vmmap)
+   {
+      vmarea = vmmap_lookup(p->p_vmmap, *((uint32_t*)vaddr));
+      if(vmarea)
+      {
+        if(vmarea->vma_prot & perm)
+        {
+           return 1;
         }
-        if(i)
-        dbg(DBG_VM,"INFO: The given address 0x%x has required permissions",*((uint32_t*)vaddr));
-        /*NOT_YET_IMPLEMENTED("VM: ***none***");*/
-        return i;
+      }
+   }
+   return 0;
 }
 
 /*
@@ -150,22 +148,23 @@ int addr_perm(struct proc *p, const void *vaddr, int perm)
  */
 int range_perm(struct proc *p, const void *avaddr, size_t len, int perm)
 {
-        int i = addr_perm(p,avaddr,perm);
-        if(i){
-                uint32_t newaddr = *((uint32_t*)avaddr);
-                vmarea_t *vma = NULL;
-        repeat:        vma = vmmap_lookup(p->p_vmmap, newaddr);
-                while(vma->vma_end >=newaddr && newaddr< *((uint32_t*)avaddr)+len){
-                        newaddr +=+1;
+	int ret = addr_perm(p,avaddr,perm);
+        if(0 != ret)
+	{
+          uint32_t newaddr = *((uint32_t*)avaddr);
+          vmarea_t *vma = NULL;
+	  do {
+                vma = vmmap_lookup(p->p_vmmap, newaddr);
+                while(vma->vma_end >= newaddr && 
+		      newaddr < *((uint32_t*)avaddr)+len){
+                        newaddr += 1;
                         }
                 
-                i = addr_perm(p,&newaddr, perm);
-                if(i&&newaddr< (*((uint32_t*)avaddr)+len-1))
-                        goto repeat;
+                ret = addr_perm(p,&newaddr, perm);
+	  } while(ret && 
+		  newaddr< (*((uint32_t*)avaddr)+len-1));
         }
 
-        if(i)
-        dbg(DBG_VM,"INFO: The given address range 0x%x-0x%x has required permissions",*((uint32_t*)avaddr),*((uint32_t*)avaddr)+len);
-        /*NOT_YET_IMPLEMENTED("VM: ***none***");*/
-        return i;
+        if(ret)
+        return ret;
 }
